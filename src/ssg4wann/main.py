@@ -64,7 +64,7 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
         )
         mpi_print(f"Starting  operation expressions calculation...")
 
-        resultsop = mpi_map(op_loop, enumerate(ops_list, start=0), USE_MPI, comm, desc="Parallel Operation")
+        resultsop = mpi_map(op_loop, enumerate(ops_list, start=0), USE_MPI, comm, desc="Operation Processing")
 
         actdict = {}
         LatSet = set()
@@ -93,9 +93,9 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
             NONCOLLINEAR_channel=config.NONCOLLINEAR_channel
             )
             
-            mpi_print(f"Starting parallel symmetrization ...")
+            mpi_print(f"Starting symmetrization ...")
 
-            resultsent = mpi_map(ent_loop, LatSet, USE_MPI, comm, desc="Parallel Symmetrization")
+            resultsent = mpi_map(ent_loop, LatSet, USE_MPI, comm, desc="Symmetrization processing")
             
             # write symmetrized entries
             mpi_print('finish analyzing, writing symmetrized hr file...')
@@ -121,7 +121,7 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
             )
             mpi_print(f"Starting parallel symmetrization ...")
 
-            resultshard = mpi_map(ent_loop, indices, USE_MPI, comm, desc="Parallel Symmetrization Each Symmetry")
+            resultshard = mpi_map(ent_loop, indices, USE_MPI, comm, desc="Symmetrization Each Symmetry Processing")
     
             # write symmetrized entries
             mpi_print('finish analyzing, writing symmetrized hr operation...')

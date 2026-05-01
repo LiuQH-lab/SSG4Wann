@@ -76,11 +76,8 @@ def rotation_to_cubic_dmatrix(R_cart: np.ndarray, L: int) -> np.ndarray:
         for poly in f_polynomials:
             T = np.zeros((3, 3, 3))
             for (px, py, pz), coeff in poly.items():
-
                 indices = [0]*px + [1]*py + [2]*pz
-
                 perms = list(set(permutations(indices)))
-
                 val = coeff / len(perms)
                 for p in perms:
                     T[p] = val

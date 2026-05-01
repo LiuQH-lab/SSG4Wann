@@ -69,18 +69,14 @@ __      __   _                    _
  \ \/\/ / -_) / _/ _ \ '  \/ -_) |  _/ _ \
   \_/\_/\___|_\__\___/_|_|_\___|  \__\___/
 
- _____ _____ _____                          
-/  ___/  ___|  __ \                         
-\ `--.\ `--.| |  \/___ _   _ _ __ ___  _ __ ___  
- `--. \`--. \ | __/ __| | | | '_ ` _ \| '_ ` _ \ 
-/\__/ /\__/ / |_\ \__ \ |_| | | | | | | | | | | |
-\____/\____/ \____/___/\__, |_| |_| |_|_| |_| |_|
-                        __/ |                    
-                       |___/                     
+ _____ _____ _____    ___  _    _                       
+/  ___/  ___|  __ \  /   || |  | |                      
+\ `--.\ `--.| |  \/ / /| || |  | | __ _ _ __  _ __      
+ `--. \`--. \ | __ / /_| || |/\| |/ _` | '_ \| '_ \     
+/\__/ /\__/ / |_\ \\___  |\  /\  / (_| | | | | | | |    
+\____/\____/ \____/    |_/ \/  \/ \__,_|_| |_|_| |_|    
 
-
-            
-              [ Developed by: NitreneG ]
+                           [ Developed by: NitreneG ]
 ================================================================================"""
         mpi_print(welcome_art)
         mpi_print("MPI successfully initialized!")
@@ -173,7 +169,6 @@ def mpi_map(func, iterable, USE_MPI, comm=None, desc="Processing"):
     local_tasks = iterable[start:end]
     local_results = []
     
-    # 进度条处理 (仅 Rank 0 显示)
     out_terminal = None
     if rank == 0:
         if is_cluster:
@@ -202,7 +197,6 @@ def mpi_map(func, iterable, USE_MPI, comm=None, desc="Processing"):
     for task in pbar:
         local_results.append(func(task))
         
-    # Rank 0 关闭终端句柄
     if rank == 0 and out_terminal is not None and hasattr(out_terminal, 'close') and out_terminal is not sys.stderr:
         out_terminal.close()
         

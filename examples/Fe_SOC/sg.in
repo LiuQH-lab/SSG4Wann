@@ -9,3 +9,6 @@ bands_num_points = 100
 NONCOLLINEAR_channel = True
 spin_direction = 0 0 1
 symm_output = True
+each_symm = False 
+
+hard_ave = False
