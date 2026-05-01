@@ -34,8 +34,8 @@ LMAXMIX = 4
 LASPH   = .TRUE.
 
 
-LSORBIT = .FALSE.          
-LNONCOLLINEAR = .FALSE.     
+LSORBIT = .TRUE.          
+LNONCOLLINEAR = .TRUE.     
 ISYM = 1
 ISPIN = 2
 #SAXIS = 0 0 1

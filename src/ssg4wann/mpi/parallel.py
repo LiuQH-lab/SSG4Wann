@@ -1,6 +1,4 @@
-
 from itertools import product
-
 from ..core.ops_act import Mops, Sops
 import numpy as np
 

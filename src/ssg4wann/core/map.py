@@ -1,6 +1,7 @@
 import numpy as np
 
 def revmapsp(labelNew, L, tau, spin, orbitals, atol=0.01):
+    """information to index"""
     target_tau = np.array(tau, dtype=float).reshape(3)
     target_tau = target_tau % 1.0 
 

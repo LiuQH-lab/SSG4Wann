@@ -1,3 +1,4 @@
+from __future__ import annotations  
 import sys
 import builtins
 from functools import partial
@@ -5,24 +6,39 @@ import traceback
 import time
 from tqdm import tqdm
 import os
+from typing import Callable, Any
 
+class RealTerminal:
+    def __init__(self):
+        self.file = None
+        try:
 
+            self.file = open('/dev/tty', 'w')
+        except Exception:
+            self.file = sys.stderr
 
+    def write(self, text):
+        self.file.write(text)
+
+    def flush(self):
+        self.file.flush()
+        
+    def close(self):
+        if self.file is not sys.stderr:
+            self.file.close()
 
 def get_real_terminal():
     try:
-        # Linux / MacOS
         return open('/dev/tty', 'w')
     except Exception:
-        # Windows
         return sys.stderr
     
-def global_mpi_print(*args, rank, **kwargs):
+def global_mpi_print(*args, rank: int, **kwargs):
     if rank == 0:
         kwargs.setdefault('flush', True)
         builtins.print(*args, **kwargs)
 
-def mpi_init() -> tuple[int, MPI.Comm, callable, bool]:
+def mpi_init() -> tuple[int, Any, Callable, bool]:
     try:
         from mpi4py import MPI
         comm = MPI.COMM_WORLD
@@ -35,6 +51,7 @@ def mpi_init() -> tuple[int, MPI.Comm, callable, bool]:
         rank = 0
         total_processes = 1
         USE_MPI = False
+        
     os.environ["OMP_NUM_THREADS"] = "1"
     os.environ["MKL_NUM_THREADS"] = "1" 
     os.environ["OPENBLAS_NUM_THREADS"] = "1"
@@ -70,38 +87,43 @@ __      __   _                    _
         mpi_print(f"MPI Parallel Symmetrization Starting with {total_processes} processes...")
         if total_processes > 1:
             mpi_print(f"1 master process (Rank 0) is responsible for coordination and I/O operations.")
-            mpi_print(f"{total_processes} worker processes (Rank 0 to {total_processes - 1}) are responsible for parallel computation.")
+            mpi_print(f"{total_processes - 1} worker processes (Rank 1 to {total_processes - 1}) are responsible for parallel computation.")
         else:
-            mpi_print(f"you are running in serial mode without MPI parallelization, consider using mpirun with multiple processes for faster symmetrization!")
+            mpi_print("You are running in serial mode without MPI parallelization. Consider using mpirun with multiple processes for faster symmetrization!")
         mpi_print("="*80)
+        
     return rank, comm, mpi_print, USE_MPI
 
+
 def mpi_excepthook(exc_type, exc_value, exc_traceback):
+    try:
+        from mpi4py import MPI
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
         size = comm.Get_size()
-        error_text = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
-        sys.stderr.write("\n" + "!"*30 + " CRITICAL ERROR DETECTED " + "!"*30 + "\n")
-        sys.stderr.write(f"Failing rank: {rank}/{size - 1} on host {MPI.Get_processor_name()}\n")
-        sys.stderr.write(error_text)
-        sys.stderr.write("!"*85 + "\n")
-        sys.stdout.flush()
-        sys.stderr.flush()
-        time.sleep(2) 
+        processor_name = MPI.Get_processor_name()
+    except ImportError:
+        comm = None
+        rank = 0
+        size = 1
+        processor_name = "Localhost"
 
-        if size > 1:
-            comm.Abort(1)
-        else:
-            sys.exit(1)
-        if should_emit:
-            error_text = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
-            sys.stderr.write("\n" + "!"*30 + " CRITICAL ERROR DETECTED " + "!"*30 + "\n")
-            sys.stderr.write(f"Failing rank: {rank}/{size - 1} on host {MPI.Get_processor_name()}\n")
-            sys.stderr.write(error_text)
-            sys.stderr.write("!"*85 + "\n")
-            sys.stderr.flush()
+    error_text = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+    sys.stderr.write("\n" + "!"*30 + " CRITICAL ERROR DETECTED " + "!"*30 + "\n")
+    sys.stderr.write(f"Failing rank: {rank}/{size - 1} on host {processor_name}\n")
+    sys.stderr.write(error_text)
+    sys.stderr.write("!"*85 + "\n")
+    sys.stdout.flush()
+    sys.stderr.flush()
+    time.sleep(2) 
+
+    if size > 1 and comm is not None:
+        comm.Abort(1)
+    else:
+        sys.exit(1)
+
+
 def mpi_map(func, iterable, USE_MPI, comm=None, desc="Processing"):
-
     if not isinstance(iterable, list):
         try:
             iterable = sorted(list(iterable))
@@ -131,15 +153,17 @@ def mpi_map(func, iterable, USE_MPI, comm=None, desc="Processing"):
                 dynamic_ncols=True,
                 mininterval=0.1      
             )
+        
+        results = [func(task) for task in pbar]
+    
+        if hasattr(out_terminal, 'close') and out_terminal is not sys.stderr:
+            out_terminal.close()
             
-
-        return [func(task) for task in pbar]
-
+        return results
 
     rank = comm.Get_rank()
     size = comm.Get_size()
     
-
     chunk_size = len(iterable) // size
     remainder = len(iterable) % size
     
@@ -150,6 +174,7 @@ def mpi_map(func, iterable, USE_MPI, comm=None, desc="Processing"):
     local_results = []
     
     # 进度条处理 (仅 Rank 0 显示)
+    out_terminal = None
     if rank == 0:
         if is_cluster:
             pbar = tqdm(
@@ -176,6 +201,10 @@ def mpi_map(func, iterable, USE_MPI, comm=None, desc="Processing"):
         
     for task in pbar:
         local_results.append(func(task))
+        
+    # Rank 0 关闭终端句柄
+    if rank == 0 and out_terminal is not None and hasattr(out_terminal, 'close') and out_terminal is not sys.stderr:
+        out_terminal.close()
         
     gathered = comm.gather(local_results, root=0)
 

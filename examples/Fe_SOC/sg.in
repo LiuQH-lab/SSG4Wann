@@ -1,40 +1,11 @@
 # template input file 
 # anything following '#', '!' or '//' in a line will be regard as comments
-
-#SOC flag True or False or T or F
 soc = T
-
-# seed name of the Hamiltonian file
 SeedName='wannier90'  
-
-# .win file path
 use_win = 'wannier90.win'
-
-# channel format: 'updnupdn' (False) or 'upup...dndn...' (True)
 chnl = True
-
-#transform hr file to band structure data
 bands_trans = False
 bands_num_points = 100
-
-use_hr_file = 'wannier90_symmed_hr.dat'
-
-begin kpoint_path  
-G 0.0000000000 0.0000000000 0.0000000000 H 0.5000000000 -0.50000000000 0.50000000000    
-H 0.5000000000 -0.50000000000 0.50000000000 N 0.000000000 0.000000000 0.50000000000     
-N 0.000000000 0.000000000 0.50000000000  G 0.0000000000 0.0000000000 0.0000000000
-G 0.0000000000 0.0000000000 0.0000000000 P 0.250000000000 0.250000000000 0.25000000000
-P 0.250000000000 0.250000000000 0.25000000000 N 0.000000000 0.0000000000 0.5000000000
-end kpoint_path
-
-#NONCOLINEAR flag True or False or T or F
 NONCOLLINEAR_channel = True
-
-#symmetrization with each operator in the group(this is for testing the symmetrization with each operator, and it will present multiple symmetrized Hamiltonian files with each operator)
-each_symm = False
-
-#hard average flag True or False or T or F (true for averaging with the group order)
-hard_ave = False
-
+spin_direction = 0 0 1
 symm_output = True
-

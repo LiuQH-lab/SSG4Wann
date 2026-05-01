@@ -84,7 +84,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def ssg4wann():
-    rank, comm, mpi_print, USE_MPI = mpi_init()
+    
     parser = build_parser()
     args = parser.parse_args()
     config_path = Path(args.config).expanduser().resolve()
@@ -93,14 +93,28 @@ def ssg4wann():
         workdir = config_path.parent
     else:
         workdir = Path(args.workdir).expanduser().resolve()
-
-
-    if args.init or not config_path.exists():
-        if config_path.exists() and args.init:
-            mpi_print(f"[Warning] '{config_path.name}' already exists in {workdir}.")
-            mpi_print("Initialization aborted to prevent overwriting.")
+    if args.init:
+        if config_path.exists():
+            print(f"[Warning] '{config_path.name}' already exists in {workdir}.")
+            print("Initialization aborted to prevent overwriting.")
             sys.exit(1) 
-            
+        print(f"[Auto-Detect] Scanning {workdir} for system parameters... The ssg4wann will generate a default config /'sg.in' based on the detected parameters for you.")
+        params = detect_system_settings(workdir)
+        template_content = get_sg_template(params)
+
+        try:
+            config_path.write_text(template_content, encoding="utf-8")
+            print(f"[Success] Generated configuration file at: {config_path}")
+            print(f"          - SeedName: '{params['seedname']}'")
+            print(f"          - SOC: {params['soc']}")
+            print(f"          - Noncollinear: {params['noncollinear']}")
+        except Exception as e:
+            print(f"[Error] Failed to write config file: {e}")
+            sys.exit(1)
+        sys.exit(0)
+
+    rank, comm, mpi_print, USE_MPI = mpi_init()
+    if  not config_path.exists():
         mpi_print(f"[Auto-Detect] Scanning {workdir} for system parameters... The ssg4wann will generate a default config /'sg.in' based on the detected parameters for you.")
         params = detect_system_settings(workdir)
         template_content = get_sg_template(params)
@@ -114,11 +128,13 @@ def ssg4wann():
             except Exception as e:
                 mpi_print(f"[Error] Failed to write config file: {e}")
                 sys.exit(1)
-        comm.Barrier()
+                
+        if USE_MPI:
+            comm.Barrier()
                 
 
-        if args.init:
-            sys.exit(0)
+
+            
 
     if args.dry_run:
         mpi_print(f"[dry-run] config: {config_path}")

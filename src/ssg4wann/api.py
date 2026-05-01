@@ -1,5 +1,4 @@
 from pathlib import Path
-
 from .mpi.system import mpi_init
 from .cli import detect_system_settings, get_sg_template
 from .main import avg_kernel

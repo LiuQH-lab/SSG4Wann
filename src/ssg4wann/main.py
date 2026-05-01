@@ -2,7 +2,6 @@ import os
 from functools import partial
 from posixpath import abspath, dirname
 import numpy as np
-
 from findspingroup import find_spin_group_input_ssg
 from findspingroup.find_spin_group import write_poscar_ssg_symmetry_dat
 from .core.wannob import wannobs, WannOrb
@@ -13,11 +12,6 @@ from .mpi import *
 def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
 
     workdir = dirname(abspath(config_path))
-
-
-    
-                
-    #Parameter Initialization
     config = infoload(config_path, rank)
 
     

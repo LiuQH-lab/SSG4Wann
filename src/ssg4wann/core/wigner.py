@@ -80,11 +80,10 @@ def rotation_to_cubic_dmatrix(R_cart: np.ndarray, L: int) -> np.ndarray:
                 indices = [0]*px + [1]*py + [2]*pz
 
                 perms = list(set(permutations(indices)))
-                # 平分系数到每一个对称位置
+
                 val = coeff / len(perms)
                 for p in perms:
                     T[p] = val
-            # 归一化该张量（保证转换矩阵为正交矩阵）
             T = T / np.linalg.norm(T)
             T_f.append(T)
 

@@ -1,6 +1,6 @@
 [project]
 name = "ssg4wann"
-version = "0.99.3"
+version = "0.99.5"
 description = "A parallel (MPI-enabled) tool for symmetrizing Wannier tight-binding Hamiltonians (`_hr.dat`) generated from Wannier90, with oriented spin space group."
 license = "Apache-2.0"
 license-files = ["LICENSE"]
@@ -16,10 +16,6 @@ dependencies = [
     "tqdm>=4.67.3",
     
 ]
-[project.optional-dependencies]
-mpi = ["mpi4py>=4.1.1"]
-
-
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
@@ -29,9 +25,20 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Physics",
 ]
+[project.optional-dependencies]
+mpi = ["mpi4py>=4.1.1"]
+
+[project.urls]
+Homepage = "https://github.com/LiuQH-lab/SSG4Wann"
+Repository = "https://github.com/LiuQH-lab/SSG4Wann"
+Issues = "https://github.com/LiuQH-lab/SSG4Wann/issues"
+
+[tool.setuptools.dynamic]
+version = {attr = "ssg4wann.version.__version__"}
 
 
-keywords = ["wannier90", "tight-binding", "magnetic symmetry", "oriented spin space group", "parallel computing"]
+
+keywords = ["wannier90", "tight-binding", "magnetic_symmetry", "oriented_spin_space_group", "parallel_computing"]
 [project.scripts]
 ssg4wann = 'ssg4wann.cli:ssg4wann'
 [build-system]

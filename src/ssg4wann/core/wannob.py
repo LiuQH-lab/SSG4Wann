@@ -79,7 +79,7 @@ def angmap(label):
         L = 2
     elif label in ['px', 'py', 'pz']:
         L = 1
-    else:   # f orb
+    else:   
         L = 3
     return L
 
