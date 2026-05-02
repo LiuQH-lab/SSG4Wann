@@ -4,19 +4,19 @@ import numpy as np
 
 
     
-def calc_op(idx_op, soc, permutation, orbSpin, orbitals, hr_entry, spin_direction):
+def calc_op(idx_op, soc, permutation, orbSpin, orbitals, hr_entry, spin_direction, obseq):
     """Calculate the explicit expression of each symmetry operation on the Wannier function subspaces and the generated Lattices."""
         
     idx, op = idx_op
     operator, conj_factor = markjudge(soc, op, permutation=permutation, spin_direction=spin_direction)
-    repdict = operator.rep_find()
+    repdict = operator.rep_find(obseq)
 
     local_op = [operator, conj_factor]
     local_actdict = {}
     local_LatSet = set()
     
     for wann in orbSpin:
-        hopnew = operator.i_find(wann.global_index, repdict, orbSpin)
+        hopnew = operator.i_find(wann.global_index, repdict, orbSpin, obseq)
         local_actdict[(idx, wann.global_index)] = hopnew
         
     for Rtu, block in hr_entry.items():

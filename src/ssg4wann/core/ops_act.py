@@ -4,9 +4,6 @@ import numpy as np
 from .wigner import rotation_to_cubic_dmatrix
 from dataclasses import InitVar, dataclass
 
-porbdic = {1: 'pz', 2: 'px', 3: 'py'}
-dorbdic = {1: 'dz2', 2: 'dxz', 3: 'dyz', 4: 'dx2-y2', 5: 'dxy'}
-forbdic = {1: 'fz3', 2: 'fxz2', 3: 'fyz2', 4: 'fx(y2-z2)', 5: 'fyz(x2-y2)', 6: 'fxyz', 7: 'fx3-3xy2'}
 
 sigma_x = np.array([[0, 1],
                     [1, 0]], dtype=complex)
@@ -84,8 +81,11 @@ class ops_actclass:
         raise NotImplementedError("the inheritance class must implement the time reversal property, which is crucial for determining the correct spin rotation behavior in the i_find method. Please implement this property in the Mops and Sops classes accordingly.")
     
 
-    def i_find(self, i, repdict, orbSpin):
+    def i_find(self, i, repdict, orbSpin, obseq) -> list[tuple[int, complex]]:
         from .map import revmapsp, formapsp
+        # porbdic = {i: orb for i, orb in enumerate(orbseq[1], start=1)}
+        # dorbdic = {i: orb for i, orb in enumerate(orbseq[2], start=1)}
+        # forbdic = {i: orb for i, orb in enumerate(orbseq[3], start=1)}
         label, L, tau, spin = formapsp(i, orbSpin)
         tauNew = self.tau_find(tau)
         LNew = L
@@ -99,36 +99,55 @@ class ops_actclass:
             spinorNew = self.U @ np.array([[0, -1],[1, 0]]) @ spinor
             
         hopnew = []
+        
         for n, SpindNew in enumerate(spinorNew[:, 0]):
             if abs(SpindNew) > 1e-2:
                 spinNew = "up" if n == 0 else "dn"
                 basvec = np.zeros((2*L+1, 1))
                 
                 
-                match L:
-                    case 0:
-                        j = 1
-                    case 1:
-                        j = int(next(k for k, v in porbdic.items() if v == label))
-                    case 2:
-                        j = int(next(k for k, v in dorbdic.items() if v == label))
-                    case _:
-                        raise ValueError(f"Unsupported angular momentum L={L}")
+                # match L:
+                #     case 0:
+                #         j = 1
+                #     case 1:
+                #         j = int(next(k for k, v in porbdic.items() if v == label))
+                #     case 2:
+                #         j = int(next(k for k, v in dorbdic.items() if v == label))
+                #     case 3:
+                #         j = int(next(k for k, v in forbdic.items() if v == label))
+                #     case _:
+                #         raise ValueError(f"Unsupported angular momentum L={L}")
+                if L == 0:
+                    j = 1
+                elif L in obseq:
+                    j = obseq[L].index(label) + 1
+                else:
+                    raise ValueError(f"Unsupported angular momentum L={L}")
                 basvec[j-1] = 1.0
-                basvecNew = repdict[L] @ basvec
+                try:
+                    basvecNew = repdict[L] @ basvec
+                except ValueError:
+                    raise ValueError(f"matrix for L={L} is {repdict.get(L)}, base vec = {basvec}. ")
                 Angind = np.where(np.abs(basvecNew) > 1e-3)[0] + 1
                 
                 for AngindNew in Angind:
-                    match L:
-                        case 0:
-                            labelNew = label
-                        case 1:
-                            labelNew = porbdic[AngindNew]
-                        case 2:
-                            labelNew = dorbdic[AngindNew]
-                        case _:
-                            raise ValueError(f"Unsupported angular momentum L={L}")
-                        
+                    # match L:
+                    #     case 0:
+                    #         labelNew = label
+                    #     case 1:
+                    #         labelNew = porbdic[AngindNew]
+                    #     case 2:
+                    #         labelNew = dorbdic[AngindNew]
+                    #     case 3:
+                    #         labelNew = forbdic[AngindNew]
+                    #     case _:
+                    #         raise ValueError(f"Unsupported angular momentum L={L}")
+                    if L == 0:
+                        labelNew = label
+                    elif L in obseq:
+                        labelNew = obseq[L][AngindNew - 1]
+                    else:
+                        raise ValueError(f"Unsupported angular momentum L={L}")
                     coe = SpindNew * (basvecNew[AngindNew - 1, 0])
                    
                     if (inew := revmapsp(labelNew, LNew, tauNew, spinNew, orbSpin)) is  None:
@@ -144,9 +163,9 @@ class ops_actclass:
         return tauNew - np.floor(tauNew)
    
 
-    def rep_find(self):
-        prep, drep = rotation_to_cubic_dmatrix(self.rot_cart, L=1), rotation_to_cubic_dmatrix(self.rot_cart, L=2)
-        repdict = {0: np.array([[1]]) , 1: np.array(prep.tolist(), dtype=float), 2: np.array(drep.tolist(), dtype=float)}
+    def rep_find(self, obseq) -> dict:
+        prep, drep, frep = rotation_to_cubic_dmatrix(self.rot_cart, L=1, obseq=obseq), rotation_to_cubic_dmatrix(self.rot_cart, L=2, obseq=obseq), rotation_to_cubic_dmatrix(self.rot_cart, L=3, obseq=obseq)
+        repdict = {0: np.array([[1]]) , 1: np.array(prep.tolist(), dtype=float), 2: np.array(drep.tolist(), dtype=float), 3: np.array(frep.tolist(), dtype=float)}
         return repdict
     
     def R_find(self, i, j, R, orbitals):

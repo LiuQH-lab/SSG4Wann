@@ -7,5 +7,5 @@ chnl = True
 bands_trans = False
 bands_num_points = 100
 NONCOLLINEAR_channel = False
-spin_direction = 0 0 1
+spin_direction = 1.52420471 -1.07777549 1.8667619
 symm_output = True
