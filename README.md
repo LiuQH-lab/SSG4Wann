@@ -144,15 +144,13 @@ mpirun -np 56 ssgsymm -c config.in -w path/to/your/workdir
 
 At minimum, prepare:
 
-1. **Configuration**
-    `sg.in` in your working directory
 
-2. **Wannier Hamiltonian file(s)**  
+1. **Wannier Hamiltonian file(s)**  
 	Depending on your channel mode:
     Non-collinear: `wannier90_hr.dat` 
     Collinear: `wannier90.up_hr.dat` and `wannier90.dn_hr.dat`
 
-3. **Wannier metadata files** 
+2. **Wannier metadata files** 
 
     Non-collinear: `wannier90.win` 
     Collinear: `wannier90.up.win` and `wannier90.dn.win`
@@ -160,7 +158,7 @@ At minimum, prepare:
     the code will read the necessary Wannier basis, lattice structure, projection information from the `.win` file(s).
 
 
-5. **INCAR file** 
+3. **INCAR file** 
     The code will read `MAGMOM` in the INCAR file to determine the magnetic structure of the system, which is necessary for the correct symmetrization of the Hamiltonian.
     For collinear systems, the `MAGMOM` should be set to a single value per atom, while for non-collinear systems, the `MAGMOM` should be set to three values (x, y, z) per atom to specify the spin direction.
 
@@ -170,11 +168,12 @@ At minimum, prepare:
 
 ## Configuration (`sg.in`)
 
+`sg.in` is not necessarily required for running the code. If you do not provide an `sg.in` file, the code will attempt to auto-detect the system parameters and generate a it when running `ssg4wann`, and it will continue to symmetrize the Hamiltonian with the auto-generated `sg.in`. Also you can use `ssg4wann --init` command to generate the `sg.in` without running the symmetrization.
+
 Example skeleton:
 
 ```ini
 SeedName = 'wannier90'
-mark = S
 soc = False
 use_win = wannier90.win
 chnl = True
@@ -232,8 +231,6 @@ When `False`, the program will perform the whole oriented spin space group to sy
 
 When `True`, the program will lower the symmetry to the corresponding subgroup of OSSG, which is equivalent to the magnetic space group (MSG) and perform the symmetrization with the MSG symmetry.
 ```
-
-
 
 ### Optional keys
 

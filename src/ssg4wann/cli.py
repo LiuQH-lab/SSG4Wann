@@ -54,7 +54,11 @@ def detect_system_settings(workdir: Path) -> dict:
                 seed = seed.replace('_symmed', '')
             params["seedname"] = seed
             params["use_win"] = f"{seed}.win"
-            
+    wann_path = workdir / params["use_win"]
+    if not wann_path.exists():
+        raise FileNotFoundError(f"Failed to detect the Wannier90 input file. Expected to find '{params['use_win']}' in the working directory: {workdir}. Please ensure the correct Wannier90 input file is present or specify the correct seedname in the config.")
+    # else:
+
     return params
 
 
@@ -108,6 +112,8 @@ def ssg4wann():
             print(f"          - SeedName: '{params['seedname']}'")
             print(f"          - SOC: {params['soc']}")
             print(f"          - Noncollinear: {params['noncollinear']}")
+            if params['noncollinear'] == 'False':
+                print(f"          Warning: Detected collinear system! Please specify the correct `spin_direction` in the generated config file to ensure correct symmetrization results.")
         except Exception as e:
             print(f"[Error] Failed to write config file: {e}")
             sys.exit(1)
@@ -125,6 +131,9 @@ def ssg4wann():
                 mpi_print(f"          - SeedName: '{params['seedname']}'")
                 mpi_print(f"          - SOC: {params['soc']}")
                 mpi_print(f"          - Noncollinear: {params['noncollinear']}")
+                if params['noncollinear'] == 'False':
+                    mpi_print(f"          Warning: Detected collinear system! Please specify the correct `spin_direction` in the generated config file to ensure correct symmetrization results. The `ssg4wann` refuses to run with the default config for collinear systems to prevent incorrect symmetrization results!")
+                    sys.exit(0)
             except Exception as e:
                 mpi_print(f"[Error] Failed to write config file: {e}")
                 sys.exit(1)
