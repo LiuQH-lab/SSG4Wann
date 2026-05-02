@@ -7,7 +7,7 @@ from findspingroup.find_spin_group import write_poscar_ssg_symmetry_dat
 from .core.wannob import wannobs, WannOrb
 from .parsergen import *
 from .mpi import *
-
+from .core.wannob import proj_seq
 
 def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
 
@@ -35,18 +35,22 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
         nsymm = None
         hr_entry = None
         num_wann = None
+        obseq = {}
         if rank == 0:
             hrob = hr(workdir, config.seed, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel)
             hr_entry, num_wann = hrob.hr_entry()
             POSCAR_gen(permutation, posi, os.path.join(workdir, 'INCAR'), config.spin_direction, config.NONCOLLINEAR_channel)
             ops_list = usegroup(config.soc, os.path.join(workdir, 'POSCAR'), config.symm_output)
             nsymm = len(ops_list)
+            obseq = proj_seq(os.path.join(workdir, config.winpath))
         mpi_print(f"Finish loading the Group data: {nsymm} symmetry operations loaded")
         if USE_MPI:
             ops_list = comm.bcast(ops_list, root=0)
             nsymm = comm.bcast(nsymm, root=0)
             hr_entry, num_wann = comm.bcast((hr_entry, num_wann), root=0)
+            obseq = comm.bcast(obseq, root=0)
             comm.barrier()
+
 
         #find entries
         LatSet = set()
@@ -60,7 +64,8 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
         orbSpin=orbSpin, 
         orbitals=orbitals, 
         hr_entry=hr_entry,
-        spin_direction=config.spin_direction
+        spin_direction=config.spin_direction,
+        obseq= obseq
         )
         mpi_print(f"Starting  operation expressions calculation...")
 

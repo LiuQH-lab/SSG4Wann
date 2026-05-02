@@ -1,6 +1,13 @@
 from dataclasses import dataclass
+from pathlib import Path
 import numpy as np
 import re
+
+DEFAULT_ORBITALS = {
+    1: ['pz', 'px', 'py'],
+    2: ['dz2', 'dxz', 'dyz', 'dx2-y2', 'dxy'],
+    3: ['fz3', 'fxz2', 'fyz2', 'fz(x2-y2)', 'fxyz', 'fx(x2-3y2)', 'fy(3x2-y2)']
+}
 
 @dataclass
 class WannOrb:
@@ -11,21 +18,46 @@ class WannOrb:
     spin: str = None
 
 def obnote(content):
-    pattern = re.compile(r'begin projections(.*?)end projections', re.DOTALL)
+    pattern = re.compile(r'(?i)begin\s+projections(.*?)end\s+projections', re.DOTALL)
     section = pattern.search(content)
     
     if section:
         projections = section.group(1).strip().splitlines()
         label = {}
         
+        shell_expansion = {
+            's': ['s'],
+            'p': DEFAULT_ORBITALS[1],
+            'd': DEFAULT_ORBITALS[2],
+            'f': DEFAULT_ORBITALS[3]
+        }
+        
         for line in projections:
+            line = line.split('#')[0].split('!')[0].strip()
+            if not line or ':' not in line:
+                continue
+                
             parts = line.split(":")
             if len(parts) == 2:
-                atom, orbitals = parts
-                # label += orbitals.strip().split(";")
-                label[atom.strip()] = orbitals.strip().split(";")
+                atom = parts[0].strip()
+                orbitals_raw = re.split(r'[,;]', parts[1].strip().replace(" ", ""))
+                
+                expanded_orbitals = []
+                for orb in orbitals_raw:
+                    if not orb:
+                        continue
+                    
+
+                    if orb.lower() in shell_expansion:
+                        expanded_orbitals.extend(shell_expansion[orb.lower()])
+                    else:
+                        expanded_orbitals.append(orb)
+                        
+                label[atom] = expanded_orbitals
         return label
     
+    else:
+        raise ValueError("No valid 'begin projections ... end projections' block found in the .win file. Please check your .win file format and ensure it contains a properly formatted projections section.")
 def lat(content):
     pattern = re.compile(r'begin unit_cell_cart(.*?)end unit_cell_cart', re.DOTALL)
     section = pattern.search(content)
@@ -67,7 +99,6 @@ def coordi(content):
                 cart_coe = np.array([float(parts[1]), float(parts[2]), float(parts[3])]).reshape(3, 1)
                 latt_coe = np.linalg.inv(permutation) @ cart_coe
                 coordinates = [latt_coe[i][0] for i in range(0,3)] 
-                # coordinates = [float(parts[1 + i])/latti[i] for i in range(0,3)] 
                 posi.append([element, coordinates])
         
         return posi
@@ -94,7 +125,6 @@ def wannobs(winpath):
     for co in posi:
         at = co[0]
         ob = [label.get(at, []), np.float64(co[1])]
-        # ob = [label[at], np.float64(co[1])]
         wannobs.append(ob)
     k = 0
     for info in wannobs:    
@@ -107,7 +137,60 @@ def wannobs(winpath):
     permutation, permuK = lat(content)  
 
         
-
-            
     return orbitals, permutation, permuK, posi
 
+
+
+
+
+def proj_seq(win_path: str) -> dict:
+    win_path = Path(win_path)
+    if win_path.exists():
+
+        win_content = win_path.read_text(encoding="utf-8")
+    else:
+        raise ValueError(f"win_path {win_path} does not exist or is not a file.")
+
+    match = re.search(r"(?i)begin\s+projections\s*(.*?)\s*end\s+projections", win_content, re.DOTALL)
+
+
+        
+    proj_text = match.group(1)
+    custom_orders = {}
+    
+
+    orb_to_L = {o: L for L, orbs in DEFAULT_ORBITALS.items() for o in orbs}
+
+    for line in proj_text.split('\n'):
+
+        line = line.split('#')[0].split('!')[0].strip()
+        if not line:
+            continue
+            
+
+        if ':' not in line:
+            continue
+            
+        orbs_str = line.split(':')[1].strip().replace(" ", "")
+        orbs_list = [o for o in re.split(r'[,;]', orbs_str) if o]
+        
+        current_line_orders = {1: [], 2: [], 3: []}
+        for o in orbs_list:
+            if o in orb_to_L:
+                current_line_orders[orb_to_L[o]].append(o)
+                
+        for L, orbs in current_line_orders.items():
+            if not orbs:
+                continue 
+            
+            if L in custom_orders:
+                if custom_orders[L] != orbs:
+                    raise ValueError(
+                        f"conflicting orbital order for L={L}: {custom_orders[L]} vs {orbs}, check your .win file's projection section for consistency!" 
+                    )
+            else:
+                custom_orders[L] = orbs
+    if custom_orders == {}:
+        print(f"Warning: no detailed projection information found in {win_path}! the projection sequence will be set to default order")
+    custom_orders = DEFAULT_ORBITALS | custom_orders
+    return custom_orders
