@@ -60,6 +60,8 @@ Typical workflow:
 - `pandas`
 - `tqdm`
 - `findspingroup` 
+- `scipy`
+
 
 
 Optional but recommended:

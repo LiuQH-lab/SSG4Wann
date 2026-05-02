@@ -244,8 +244,7 @@ def POSCAR_gen(lat, posi, INCAR_dir, spin_direction, NONCOLLINEAR_channel):
 
 
 def get_sg_template(params: dict) -> str:
-
-    return f"""# template input file 
+    template = f"""# template input file 
 # anything following '#', '!' or '//' in a line will be regard as comments
 soc = {params['soc']}
 SeedName='{params['seedname']}'  
@@ -257,3 +256,10 @@ NONCOLLINEAR_channel = {params['noncollinear']}
 spin_direction = 0 0 1
 symm_output = True
 """
+    
+    if params.get('kpoint_path'):
+        template += "\nbegin kpoint_path\n"
+        template += params['kpoint_path']
+        template += "\nend kpoint_path\n"
+        
+    return template
