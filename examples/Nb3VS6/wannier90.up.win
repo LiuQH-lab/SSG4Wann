@@ -15,7 +15,7 @@ write_hr = true
 bands_plot = true
 
 begin projections 
-Nb:f
+Nb:dz2;dxz;dyz;dx2-y2;dxy
 V:dz2;dxz;dyz;dx2-y2;dxy
 end projections 
 
