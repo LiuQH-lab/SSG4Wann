@@ -1,6 +1,6 @@
 import numpy as np
-
-def revmapsp(labelNew, L, tau, spin, orbitals, atol=0.01):
+from .constants import TOL_WANNIER_MATCH
+def revmapsp(labelNew, L, tau, spin, orbitals, atol=TOL_WANNIER_MATCH):
     """information to index"""
     target_tau = np.array(tau, dtype=float).reshape(3)
     target_tau = target_tau % 1.0 

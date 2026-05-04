@@ -1,16 +1,9 @@
-
-
 import numpy as np
 from .wigner import rotation_to_cubic_dmatrix
 from dataclasses import InitVar, dataclass
 
-
-sigma_x = np.array([[0, 1],
-                    [1, 0]], dtype=complex)
-sigma_y = np.array([[0, -1j],
-                    [1j, 0]], dtype=complex)
-sigma_z = np.array([[1, 0],
-                    [0,-1]], dtype=complex)
+from .constants import sigma_x, sigma_y, sigma_z, TOL_SPIN_DET, TOL_ROTATION_AXIS, TOL_MATRIX_ZERO, PI
+from ..exceptions import SpinRotationError, WannierMatchError
 
 type ColVec = np.ndarray 
 type Matrix3x3 = np.ndarray
@@ -19,7 +12,7 @@ type Spinor = np.ndarray
 def permuspinget(spin_direction: ColVec) -> Matrix3x3:
     spin_direction = spin_direction / np.linalg.norm(spin_direction)
     rotaxis = np.cross([0, 0, 1], spin_direction)
-    if np.linalg.norm(rotaxis) < 1e-2:
+    if np.linalg.norm(rotaxis) < TOL_ROTATION_AXIS:
         return np.eye(3)
     else:
         rotaxis = rotaxis / np.linalg.norm(rotaxis)
@@ -28,11 +21,11 @@ def permuspinget(spin_direction: ColVec) -> Matrix3x3:
                         [rotaxis[2], 0, -rotaxis[0]],
                         [-rotaxis[1], rotaxis[0], 0]])
         permuspin = np.eye(3) + np.sin(theta) * K + (1 - np.cos(theta)) * (K @ K)
-        permuspin[np.abs(permuspin) < 1e-4] = 0.0
-        if theta > 3.1415927 or theta < 1e-4:
-            raise ValueError(f"Error in calculating permuspin matrix for spin direction {spin_direction}. Check your input symmetry operation or structure file!!!")
-        if abs(np.linalg.det(permuspin) - 1.0) > 1e-5:
-            raise ValueError(f"Error in calculating permuspin matrix for spin direction {spin_direction}. The determinant of the permuspin matrix must be 1.0, but got {np.linalg.det(permuspin)}. Check your input symmetry operation or structure file!!!")
+        permuspin[np.abs(permuspin) < TOL_SPIN_DET] = 0.0
+        if theta > PI or theta < TOL_MATRIX_ZERO:
+            raise SpinRotationError(f"Error in calculating permuspin matrix for spin direction {spin_direction}. Check your input symmetry operation or structure file!!!")
+        if abs(np.linalg.det(permuspin) - 1.0) > TOL_SPIN_DET:
+            raise SpinRotationError(f"Error in calculating permuspin matrix for spin direction {spin_direction}. The determinant of the permuspin matrix must be 1.0, but got {np.linalg.det(permuspin)}. Check your input symmetry operation or structure file!!!")
         return permuspin
         
 def rotget(rot: Matrix3x3, spin_direction: ColVec) -> Matrix3x3:
@@ -52,14 +45,14 @@ def rotget(rot: Matrix3x3, spin_direction: ColVec) -> Matrix3x3:
     ])
     sin_theta = (np.dot(v_antisym, axis) / 2.0).real
     
-    if abs(sin_theta) < 1e-4 and abs(cos_theta) - 1.0 < 1e-4:
+    if abs(sin_theta) < TOL_MATRIX_ZERO and abs(cos_theta) - 1.0 < TOL_MATRIX_ZERO:
         theta = np.arccos(cos_theta)
     else:
         theta = np.arctan2(sin_theta, cos_theta)
     term_sigma = axis[0]*sigma_x + axis[1]*sigma_y + axis[2]*sigma_z
     U = np.cos(theta/2) * np.eye(2) - 1j * np.sin(theta/2) * term_sigma
-    if np.linalg.det(U) - 1.0 > 1e-2:
-        raise ValueError("Error in calculating U matrix for spin rotation. Check your input symmetry operation or structure file!!!")
+    if np.linalg.det(U) - 1.0 > TOL_SPIN_DET:
+        raise SpinRotationError("Error in calculating U matrix for spin rotation. Check your input symmetry operation or structure file!!!")
         
     return U
 
@@ -101,61 +94,40 @@ class ops_actclass:
         hopnew = []
         
         for n, SpindNew in enumerate(spinorNew[:, 0]):
-            if abs(SpindNew) > 1e-2:
+            if abs(SpindNew) > TOL_MATRIX_ZERO:
                 spinNew = "up" if n == 0 else "dn"
                 basvec = np.zeros((2*L+1, 1))
                 
-                
-                # match L:
-                #     case 0:
-                #         j = 1
-                #     case 1:
-                #         j = int(next(k for k, v in porbdic.items() if v == label))
-                #     case 2:
-                #         j = int(next(k for k, v in dorbdic.items() if v == label))
-                #     case 3:
-                #         j = int(next(k for k, v in forbdic.items() if v == label))
-                #     case _:
-                #         raise ValueError(f"Unsupported angular momentum L={L}")
                 if L == 0:
                     j = 1
                 elif L in obseq:
+                    if label not in obseq[L]:
+                        raise WannierMatchError(f"Error in calculating the new orbital index for i={i}, label={label}, L={L}. The label is not found in the orbital sequence for L={L}. Check your input symmetry operation or wannier90.win file!!!")
                     j = obseq[L].index(label) + 1
                 else:
-                    raise ValueError(f"Unsupported angular momentum L={L}")
+                    raise WannierMatchError(f"Unsupported angular momentum L={L}")
                 basvec[j-1] = 1.0
                 try:
                     basvecNew = repdict[L] @ basvec
                 except ValueError:
-                    raise ValueError(f"matrix for L={L} is {repdict.get(L)}, base vec = {basvec}. ")
-                Angind = np.where(np.abs(basvecNew) > 1e-3)[0] + 1
+                    raise WannierMatchError(f"matrix for L={L} is {repdict.get(L)}, base vec = {basvec}. ")
+                Angind = np.where(np.abs(basvecNew) > TOL_MATRIX_ZERO)[0] + 1
                 
                 for AngindNew in Angind:
-                    # match L:
-                    #     case 0:
-                    #         labelNew = label
-                    #     case 1:
-                    #         labelNew = porbdic[AngindNew]
-                    #     case 2:
-                    #         labelNew = dorbdic[AngindNew]
-                    #     case 3:
-                    #         labelNew = forbdic[AngindNew]
-                    #     case _:
-                    #         raise ValueError(f"Unsupported angular momentum L={L}")
                     if L == 0:
                         labelNew = label
                     elif L in obseq:
                         labelNew = obseq[L][AngindNew - 1]
                     else:
-                        raise ValueError(f"Unsupported angular momentum L={L}")
+                        raise WannierMatchError(f"Unsupported angular momentum L={L}")
                     coe = SpindNew * (basvecNew[AngindNew - 1, 0])
                    
                     if (inew := revmapsp(labelNew, LNew, tauNew, spinNew, orbSpin)) is  None:
-                        raise ValueError(f"Error in calculating the new orbital index for i={i}, labelNew={labelNew}, LNew={LNew}, tauNew={tauNew}, spinNew={spinNew}. The new orbital index is not found in the wannier orbital list. Check your input symmetry operation or wannier90.win file!!!")
+                        raise WannierMatchError(f"Error in calculating the new orbital index for i={i}, labelNew={labelNew}, LNew={LNew}, tauNew={tauNew}, spinNew={spinNew}. The new orbital index is not found in the wannier orbital list. Check your input symmetry operation or wannier90.win file!!!")
                     hopnew.append((inew, coe))
 
-        if (abs(norm := sum(np.abs(coe)**2 for _, coe in hopnew))-1) > 1e-2:
-            raise ValueError(f"Error in calculating the new orbital index and coefficient for i={i}, operator = {self}. The norm of the coefficients should not be greater than 1, but got {norm}. Check your input symmetry operation or wannier90.win file!!!")
+        if (abs(norm := sum(np.abs(coe)**2 for _, coe in hopnew))-1) > TOL_MATRIX_ZERO:
+            raise WannierMatchError(f"Error in calculating the new orbital index and coefficient for i={i}, operator = {self}. The norm of the coefficients should not be greater than 1, but got {norm}. Check your input symmetry operation or wannier90.win file!!!")
         return hopnew
     
     def tau_find(self, tau:ColVec) -> ColVec:
@@ -174,17 +146,17 @@ class ops_actclass:
         _, _, tauj, _ = formapsp(j, orbitals)
         Rvec = np.array(R).reshape(3, 1)
 
-        if np.linalg.norm(taui) < 1e-2 and np.linalg.norm(self.translation) < 1e-2:
+        if np.linalg.norm(taui) < TOL_MATRIX_ZERO and np.linalg.norm(self.translation) < TOL_MATRIX_ZERO:
             Ri = np.zeros((3, 1))
         else:
             Ri = self.matrix @ taui + self.translation 
 
-        if np.linalg.norm(tauj) < 1e-2 and np.linalg.norm(self.translation) < 1e-2:
+        if np.linalg.norm(tauj) < TOL_MATRIX_ZERO and np.linalg.norm(self.translation) < TOL_MATRIX_ZERO:
             Rj = self.matrix @ Rvec
         else:
             Rj = self.matrix @ (tauj + Rvec) + self.translation
 
-        Rnew = np.floor(Rj + 1e-3) - np.floor(Ri + 1e-3) 
+        Rnew = np.floor(Rj + TOL_MATRIX_ZERO) - np.floor(Ri + TOL_MATRIX_ZERO) 
         return Rnew
     
 @dataclass

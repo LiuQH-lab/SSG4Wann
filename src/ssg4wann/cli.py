@@ -7,7 +7,7 @@ from .parsergen.generate import get_sg_template
 from .main import avg_kernel
 from .version import __version__
 from .mpi.system import mpi_init
-
+from .exceptions import ConfigParseError
 def detect_system_settings(workdir: Path) -> dict:
 
     params = {
@@ -27,13 +27,13 @@ def detect_system_settings(workdir: Path) -> dict:
         elif re.search(r"LSORBIT\s*=\s*(?:\.FALSE\.|F)", content):
             params["soc"] = "F"
         else:
-            raise ValueError("Failed to detect SOC setting from INCAR. Please ensure LSORBIT is set to .TRUE. or .FALSE.")
+            raise ConfigParseError("Failed to detect SOC setting from INCAR. Please ensure LSORBIT is set to .TRUE. or .FALSE.")
         if re.search(r"LNONCOLLINEAR\s*=\s*(?:\.TRUE\.|T)", content):
             params["noncollinear"] = "True"
         elif re.search(r"LNONCOLLINEAR\s*=\s*(?:\.FALSE\.|F)", content):
             params["noncollinear"] = "False"
         else:
-            raise ValueError("Failed to detect noncollinear setting from INCAR. Please ensure LNONCOLLINEAR is set to .TRUE. or .FALSE.")
+            raise ConfigParseError("Failed to detect noncollinear setting from INCAR. Please ensure LNONCOLLINEAR is set to .TRUE. or .FALSE.")
     else:
         raise FileNotFoundError(f"INCAR file not found in the working directory: {workdir}. Please make sure to place the INCAR file in the working directory or specify the correct path.")
     collinear_hr = list(workdir.glob("*.up_hr.dat"))
@@ -130,31 +130,54 @@ def ssg4wann():
         sys.exit(0)
 
     rank, comm, mpi_print, USE_MPI = mpi_init()
-    if  not config_path.exists():
-        mpi_print(f"[Auto-Detect] Scanning {workdir} for system parameters... The ssg4wann will generate a default config /'sg.in' based on the detected parameters for you.")
-        params = detect_system_settings(workdir)
-        template_content = get_sg_template(params)
+    
+    needs_config = False
+    if rank == 0:
+        needs_config = not config_path.exists()
+
+    if USE_MPI:
+        needs_config = comm.bcast(needs_config, root=0)
+
+    if needs_config:
+        should_exit = False 
+
         if rank == 0:
+            mpi_print(f"[Auto-Detect] Scanning {workdir} for system parameters... The SSG4Wann will generate a default config /'sg.in' based on the detected parameters for you.")
+            params = detect_system_settings(workdir)
+            template_content = get_sg_template(params)
+        
             try:
                 config_path.write_text(template_content, encoding="utf-8")
                 mpi_print(f"[Success] Generated configuration file at: {config_path}")
                 mpi_print(f"          - SeedName: '{params['seedname']}'")
                 mpi_print(f"          - SOC: {params['soc']}")
                 mpi_print(f"          - Noncollinear: {params['noncollinear']}")
+                
                 if not params.get("kpoint_path"):
                     mpi_print(f"          [Warning] 'begin kpoint_path' block not found in {params['use_win']}. Please add k-points manually in sg.in.")
                 else:
                     mpi_print(f"          - kpoint_path: Successfully extracted from {params['use_win']}")
-                if params['noncollinear'] == 'False':
-                    mpi_print(f"          Warning: Detected collinear system! Please specify the correct `spin_direction` in the generated config file to ensure correct symmetrization results. The `ssg4wann` refuses to run with the default config for collinear systems to prevent incorrect symmetrization results!")
-                    sys.exit(0)
+                
+                is_noncollinear = str(params['noncollinear']).strip().lower()
+                if is_noncollinear in ['false', 'f']:
+                    mpi_print(f"          Warning: Detected collinear system! Please specify the correct `spin_direction` in the generated config file to ensure correct symmetrization results. The SSG4Wann refuses to run with the default config for collinear systems to prevent incorrect symmetrization results!")
+                    should_exit = True
+                    
             except Exception as e:
                 mpi_print(f"[Error] Failed to write config file: {e}")
-                sys.exit(1)
-                
+                if USE_MPI:
+                    comm.Abort(1)
+                else:
+                    sys.exit(1)
+                    
         if USE_MPI:
+            
             comm.Barrier()
-                
+
+            should_exit = comm.bcast(should_exit, root=0)
+
+        if should_exit:
+            sys.exit(0)
 
 
             

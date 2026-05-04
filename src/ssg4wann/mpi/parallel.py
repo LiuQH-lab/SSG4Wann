@@ -2,7 +2,8 @@ from itertools import product
 from ..core.ops_act import Mops, Sops
 import numpy as np
 
-
+from ..core.constants import TOL_MATRIX_ZERO
+from ..exceptions import WannierMatchError, SpinRotationError
     
 def calc_op(idx_op, soc, permutation, orbSpin, orbitals, hr_entry, spin_direction, obseq):
     """Calculate the explicit expression of each symmetry operation on the Wannier function subspaces and the generated Lattices."""
@@ -52,7 +53,7 @@ def calc_ent(R, num_wann, opset, actdict, hr_entry, orbSpin, nsymm, NONCOLLINEAR
             elif i_raw <= num_wann and j_raw <= num_wann:
                 return target_R.get((i_raw, j_raw), {}).get('up', 0)
             else:
-                raise ValueError(f"Error: spin index mismatch! the indices of the basis is i = {i}, j = {j}, after operated {operator} the new index is i = {i_raw}, j = {j_raw}. Check your spin_direction!!!")
+                raise WannierMatchError(f"Error: spin index mismatch! the indices of the basis is i = {i}, j = {j}, after operated {operator} the new index is i = {i_raw}, j = {j_raw}. Check your spin_direction!!!")
     for i_range, j_range in loop_ranges:
         for i, j in product(i_range, j_range):
             entries_op = 0
@@ -123,7 +124,7 @@ def markjudge(soc, op_data, permutation, spin_direction):
         elif op_data['time_reversal'] == -1 or op_data['time_reversal'] == '-1':
             time_reversal = True
         else:
-            raise ValueError("Error time reversal value! The time reversal value must be either 1 (no time reversal) or -1 (with time reversal).")
+            raise SpinRotationError("Error time reversal value! The time reversal value must be either 1 (no time reversal) or -1 (with time reversal).")
         operator = Mops(
             matrix=np.array(op_data['real_rotation']),
             translation=np.array(op_data['translation']).reshape(3, 1),
@@ -144,12 +145,12 @@ def markjudge(soc, op_data, permutation, spin_direction):
             spin_direction=spin_direction
         )
         det = np.linalg.det(operator.opSpin)
-        if abs(det - 1) < 1e-2:
+        if abs(det - 1) < TOL_MATRIX_ZERO:
             conj_factor = False
-        elif abs(det + 1) < 1e-2:
+        elif abs(det + 1) < TOL_MATRIX_ZERO:
             conj_factor = True
         else:
-            raise ValueError("Error spin rotation!!! Check the determinant of the spin rotation matrix. Its determinant must be ±1. Check your input symmetry operation or structure file!!!")
+            raise SpinRotationError("Error spin rotation!!! Check the determinant of the spin rotation matrix. Its determinant must be ±1. Check your input symmetry operation or structure file!!!")
 
         return operator, conj_factor
     

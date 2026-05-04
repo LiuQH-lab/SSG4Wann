@@ -1,6 +1,6 @@
 # SSG4Wann
 
-A MPI-enabled tool for **symmetrizing Wannier tight-binding Hamiltonians** (`*_hr.dat`) generated from Wannier90, using the Oriented Spin Space Group (SSG) symmetry of the magnetic system and supporting both strong and weak spin-orbit coupling limits.
+A MPI-enabled tool for **symmetrizing Wannier tight-binding Hamiltonians** (`*_hr.dat`) generated from Wannier90, using the Oriented Spin Space Group (OSSG) symmetry of the magnetic system and supporting both strong and weak spin-orbit coupling limits.
 
 ---
 
@@ -166,7 +166,7 @@ At minimum, prepare:
 
     If `ssg4wann` is going to generate the `sg.in` automatically, it will read `LNONCOLLINEAR` and `LSORBIT` tags in the INCAR file to determine the `soc` and `NONCOLLINEAR_channel` settings in the generated `sg.in`.
 
-    
+Furthermore, you can provide an optional `sg.in` file to specify the configuration for the symmetrization process. If it is not provided, the code will automatically generate one based on the input files and the system parameters it detects. See the next section for details on the `sg.in` configuration.
 
 ## Configuration (`sg.in`)
 

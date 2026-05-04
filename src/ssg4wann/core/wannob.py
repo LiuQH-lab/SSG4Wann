@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from pathlib import Path
 import numpy as np
 import re
+from ..exceptions import ConfigParseError
+from .constants import DEFAULT_ORBITALS
 
 DEFAULT_ORBITALS = {
     1: ['pz', 'px', 'py'],
@@ -51,15 +53,16 @@ def obnote(content):
                     if orb.lower() in shell_expansion:
                         expanded_orbitals.extend(shell_expansion[orb.lower()])
                     else:
-                        expanded_orbitals.append(orb)
+                        expanded_orbitals.append(orb.lower())
                         
                 label[atom] = expanded_orbitals
         return label
     
     else:
-        raise ValueError("No valid 'begin projections ... end projections' block found in the .win file. Please check your .win file format and ensure it contains a properly formatted projections section.")
+        raise ConfigParseError("No valid 'begin projections ... end projections' block found in the .win file. Please check your .win file format and ensure it contains a properly formatted projections section.")
+    
 def lat(content):
-    pattern = re.compile(r'begin unit_cell_cart(.*?)end unit_cell_cart', re.DOTALL)
+    pattern = re.compile(r'begin unit_cell_cart(.*?)end unit_cell_cart', re.DOTALL | re.IGNORECASE)
     section = pattern.search(content)
     
     if section:
@@ -81,10 +84,11 @@ def lat(content):
                                        [f1, f2, f3],
                                        [g1, g2, g3]])
         return permutation, permuK
-    
-    
+    else:
+        raise ConfigParseError("No valid 'begin unit_cell_cart ... end unit_cell_cart' block found in the .win file. Please check your .win file format and ensure it contains a properly formatted unit cell section.")
+
 def coordi(content):
-    pattern = re.compile(r'begin atoms_cart(.*?)end atoms_cart', re.DOTALL)
+    pattern = re.compile(r'begin atoms_cart(.*?)end atoms_cart', re.DOTALL | re.IGNORECASE)
     section = pattern.search(content)
     permutation, permuK = lat(content)
     
@@ -102,7 +106,9 @@ def coordi(content):
                 posi.append([element, coordinates])
         
         return posi
-    
+    else:
+        raise ConfigParseError("No valid 'begin atoms_cart ... end atoms_cart' block found in the .win file. Please check your .win file format and ensure it contains a properly formatted atoms section.")
+
 def angmap(label):
     if label == 's':
         L = 0
@@ -145,14 +151,16 @@ def wannobs(winpath):
 
 def proj_seq(win_path: str) -> dict:
     win_path = Path(win_path)
-    if win_path.exists():
+
+    if win_path.is_file():
 
         win_content = win_path.read_text(encoding="utf-8")
     else:
-        raise ValueError(f"win_path {win_path} does not exist or is not a file.")
+        raise ConfigParseError(f"win_path {win_path} does not exist or is not a file.")
 
     match = re.search(r"(?i)begin\s+projections\s*(.*?)\s*end\s+projections", win_content, re.DOTALL)
-
+    if match is None:
+        raise ConfigParseError(f"No valid 'begin projections ... end projections' block found in {win_path}! Please check your .win file format and ensure it contains a properly formatted projections section.")
 
         
     proj_text = match.group(1)
@@ -172,6 +180,7 @@ def proj_seq(win_path: str) -> dict:
             continue
             
         orbs_str = line.split(':')[1].strip().replace(" ", "")
+        orbs_str = orbs_str.lower()
         orbs_list = [o for o in re.split(r'[,;]', orbs_str) if o]
         
         current_line_orders = {1: [], 2: [], 3: []}
@@ -185,7 +194,7 @@ def proj_seq(win_path: str) -> dict:
             
             if L in custom_orders:
                 if custom_orders[L] != orbs:
-                    raise ValueError(
+                    raise ConfigParseError(
                         f"conflicting orbital order for L={L}: {custom_orders[L]} vs {orbs}, check your .win file's projection section for consistency!" 
                     )
             else:

@@ -8,7 +8,7 @@ from .core.wannob import wannobs, WannOrb
 from .parsergen import *
 from .mpi import *
 from .core.wannob import proj_seq
-
+from .exceptions import ConfigParseError
 def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
 
     workdir = dirname(abspath(config_path))
@@ -39,7 +39,7 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
         if rank == 0:
             hrob = hr(workdir, config.seed, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel)
             hr_entry, num_wann = hrob.hr_entry()
-            POSCAR_gen(permutation, posi, os.path.join(workdir, 'INCAR'), config.spin_direction, config.NONCOLLINEAR_channel)
+            POSCAR_gen(permutation, posi, os.path.join(workdir, 'INCAR'), config.spin_direction, config.NONCOLLINEAR_channel, workdir)
             ops_list = usegroup(config.soc, os.path.join(workdir, 'POSCAR'), config.symm_output)
             nsymm = len(ops_list)
             obseq = proj_seq(os.path.join(workdir, config.winpath))
@@ -172,6 +172,8 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
 def bds_trans(hrob, workdir, seed, hr4trans, bands_num_points, kpath, permuK, permutation, comm, USE_MPI):
     if USE_MPI:
         rank = comm.Get_rank()
+    else:
+        rank = 0
     mpi_print = partial(global_mpi_print, rank=rank)
     mpi_print(f'transforing {hr4trans} to band structure data...')
     key = hr4trans.split('.')[0]
@@ -186,9 +188,9 @@ def bds_trans(hrob, workdir, seed, hr4trans, bands_num_points, kpath, permuK, pe
         permuK=permuK, 
         permutation=permutation
     )
-    mpi_print(f"Starting parallel band structure calculation...")
+    mpi_print(f"Starting band structure calculation...")
 
-    resultseigen = mpi_map(eig_loop, k_points, USE_MPI, comm, desc="Parallel Band Structure Calculation")
+    resultseigen = mpi_map(eig_loop, k_points, USE_MPI, comm, desc="Band Structure Calculation")
     mpi_print(f"finished diagonalization, writing to {bandspath} ...")
     if rank == 0:
         eigenvalues = [item for sublist in resultseigen for item in sublist]
@@ -206,7 +208,7 @@ def usegroup(soc, POSCAR_path, symm_output):
             ops_list = payload["ssg"]["ops"]
         
     except Exception as e:
-        raise ValueError(f"Failed to extract symmetry operations for soc '{soc}' from the group finding output. Please check the output POSCAR. Original error: {e}")
+        raise ConfigParseError(f"Failed to extract symmetry operations for soc '{soc}' from the group finding output. Please check the output POSCAR. Original error: {e}")
 
     if symm_output:
         write_poscar_ssg_symmetry_dat("ssg_symm.json", payload)

@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import time
 
+from ..exceptions import WannierMatchError
 class hr:
     def __init__(self, cwd, seed,  NONCOLLINEAR_channel: bool, hr4trans=None):
         self.NONCOLLINEAR_channel = NONCOLLINEAR_channel
@@ -196,7 +197,7 @@ class hr:
         checkpass = True
         for Rtu in h1:
             if Rtu not in h2:
-                raise ValueError(f"Rtu {Rtu} is missing in this hr_op!")
+                raise WannierMatchError(f"Rtu {Rtu} is missing in this hr_op!")
             mat1 = h1[Rtu]["mat"]
             mat2 = h2[Rtu]["mat"]
             diff_max = np.max(np.abs(mat1 - mat2))

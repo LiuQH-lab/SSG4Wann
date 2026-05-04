@@ -1,11 +1,38 @@
 # template input file 
 # anything following '#', '!' or '//' in a line will be regard as comments
+
+#SOC flag True for OSSG or False for subgroup MSG
 soc = F
+
+# seed name of the Hamiltonian file
 SeedName='wannier90'  
+
+# .win file
 use_win = 'wannier90.up.win'
+
+# spin channel format: 'updnupdn' (False) or 'upup...dndn...' (True)
 chnl = True
+
+# transform hr file to band structure data
 bands_trans = False
+
+# number of k-points for band between each 2 high-symmetry k points
 bands_num_points = 100
+
+# NONCOLINEAR flag True or False or T or F
 NONCOLLINEAR_channel = False
-spin_direction = 1.52420471 -1.07777549 1.8667619
+
+# direction of the spin polarization
+spin_direction = 1.524205 -1.077775 1.866762
+
+
+# output the OSSG information
 symm_output = True
+
+begin kpoint_path
+G 0.0000000000 0.0000000000 0.0000000000 H 0.5000000000 -0.50000000000 0.50000000000    
+H 0.5000000000 -0.50000000000 0.50000000000 N 0.000000000 0.000000000 0.50000000000     
+N 0.000000000 0.000000000 0.50000000000  G 0.0000000000 0.0000000000 0.0000000000
+G 0.0000000000 0.0000000000 0.0000000000 P 0.250000000000 0.250000000000 0.25000000000
+P 0.250000000000 0.250000000000 0.25000000000 N 0.000000000 0.0000000000 0.5000000000
+end kpoint_path

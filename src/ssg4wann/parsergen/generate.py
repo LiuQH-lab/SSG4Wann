@@ -3,6 +3,8 @@ from datetime import datetime
 import os
 import numpy as np
 
+from ..exceptions import ConfigParseError
+
 def aveterms(entries_op, nsymm):
 
     acc = defaultdict(lambda: [0+0j, 0+0j])
@@ -69,7 +71,6 @@ def outwrite(cwd, seed, reco, num_wann, nrpts, NONCOLLINEAR_channel):
             f.write(f"{num_wann:12d}\n")
             f.write(f"{nrpts:12d}\n")
 
-            # figuring out
             degeneracies = [1] * nrpts
             for i in range(0, nrpts, 15):
                 line = "".join(f"{d:5d}" for d in degeneracies[i:i+15])
@@ -105,7 +106,6 @@ def outwrite(cwd, seed, reco, num_wann, nrpts, NONCOLLINEAR_channel):
             f_dn.write(f"{num_wann:12d}\n")
             f_dn.write(f"{nrpts:12d}\n")
 
-            # figuring out
             degeneracies = [1] * nrpts
             for i in range(0, nrpts, 15):
                 line = "".join(f"{d:5d}" for d in degeneracies[i:i+15])
@@ -143,7 +143,7 @@ def bandwrite(bandspath, x_axis, eigenvalues, hr4trans, labels):
 
 
     
-def POSCAR_gen(lat, posi, INCAR_dir, spin_direction, NONCOLLINEAR_channel):
+def POSCAR_gen(lat, posi, INCAR_dir, spin_direction, NONCOLLINEAR_channel, workdir):
     magmom_str_lines = ""
     is_reading_magmom = False
     
@@ -206,12 +206,12 @@ def POSCAR_gen(lat, posi, INCAR_dir, spin_direction, NONCOLLINEAR_channel):
 
                 final_magmom_values.append(f"{mag_vector[0]:.6f} {mag_vector[1]:.6f} {mag_vector[2]:.6f}")
             except ValueError:
-                raise ValueError(f"Warning: Unable to convert '{mag}' to float. Please check the MAGMOM values in the INCAR file.")
+                raise ConfigParseError(f"Warning: Unable to convert '{mag}' to float. Please check the MAGMOM values in the INCAR file.")
 
     else:
         final_magmom_values = expanded_magmoms
 
-    with open('POSCAR', 'w') as f:
+    with open(os.path.join(workdir, 'POSCAR'), 'w') as f:
         f.write('Generated POSCAR from win with the magnetic moments\n')
         f.write('1.0\n')
         lat = lat.T
@@ -246,14 +246,32 @@ def POSCAR_gen(lat, posi, INCAR_dir, spin_direction, NONCOLLINEAR_channel):
 def get_sg_template(params: dict) -> str:
     template = f"""# template input file 
 # anything following '#', '!' or '//' in a line will be regard as comments
+
+#SOC flag True for OSSG or False for subgroup MSG
 soc = {params['soc']}
+
+# seed name of the Hamiltonian file
 SeedName='{params['seedname']}'  
+
+# .win file
 use_win = '{params['use_win']}'
+
+# spin channel format: 'updnupdn' (False) or 'upup...dndn...' (True)
 chnl = True
+
+# transform hr file to band structure data
 bands_trans = False
+
+# number of k-points for band between each 2 high-symmetry k points
 bands_num_points = 100
+
+# NONCOLINEAR flag True or False or T or F
 NONCOLLINEAR_channel = {params['noncollinear']}
+
+# direction of the spin polarization
 spin_direction = 0 0 1
+
+# output the OSSG information
 symm_output = True
 """
     
@@ -263,3 +281,4 @@ symm_output = True
         template += "\nend kpoint_path\n"
         
     return template
+

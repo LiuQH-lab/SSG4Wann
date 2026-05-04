@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from functools import partial
 from typing import Callable, Any
 from ..mpi.system import global_mpi_print
-
+from ..exceptions import ConfigParseError
 
 type RowVec = np.ndarray
 
@@ -26,17 +26,17 @@ class Config:
 
     def validate(self, mpi_print: Callable) -> None:
         if self.bands_trans and not self.kpath_segments:
-            raise ValueError("Error: 'bands_trans' is True, but no 'kpoint_path' block found in sg.in")
+            raise ConfigParseError("Error: 'bands_trans' is True, but no 'kpoint_path' block found in sg.in")
             
 
             
 
             
         if self.NONCOLLINEAR_channel is None:
-            raise ValueError("Error: NONCOLLINEAR_channel variable is not set.")
+            raise ConfigParseError("Error: NONCOLLINEAR_channel variable is not set.")
         if self.NONCOLLINEAR_channel and not self.chnl:
-            raise ValueError("Error: NONCOLLINEAR_channel is True but chnl is False.")
-            
+            raise ConfigParseError("Error: NONCOLLINEAR_channel is True but chnl is False.")
+
 
 
         if not self.bands_trans:
@@ -45,14 +45,14 @@ class Config:
                 self.spin_direction = np.array([0.0, 0.0, 1.0])
 
             if self.each_symm and not self.hard_ave:
-                raise ValueError("Error: 'each_symm' is True but 'hard_ave' is False.")
+                raise ConfigParseError("Error: 'each_symm' is True but 'hard_ave' is False.")
             if self.hard_ave and not self.each_symm:
                 mpi_print("Warning: 'hard_ave' is True. Large Errors possible!!!")
             if not self.NONCOLLINEAR_channel and self.spin_direction is None:
-                raise ValueError("Error: 'NONCOLLINEAR_channel' is False but 'spin_direction' is not set!!!") 
+                raise ConfigParseError("Error: 'NONCOLLINEAR_channel' is False but 'spin_direction' is not set!!!") 
         else:
             if not self.hr4trans:
-                raise ValueError("Error: 'bands_trans' is True but 'use_hr_file' is not set.")
+                raise ConfigParseError("Error: 'bands_trans' is True but 'use_hr_file' is not set.")
 
 
 def _parse_bool(val: str) -> bool:
@@ -122,13 +122,13 @@ def infoload(config_path: str, rank: int) -> Config:
                             try:
                                 config.spin_direction = np.array(parts[:3], dtype=float)
                             except ValueError:
-                                mpi_print(f"Warning: Wrong spin_direction {line}")
+                                raise ConfigParseError(f"Warning: Wrong spin_direction {line}")
                         else:
-                            mpi_print(f"Warning: spin_direction needs 3 components in line: {line}")
-                            
+                            raise ConfigParseError(f"Warning: spin_direction needs 3 components in line: {line}")
+
     except FileNotFoundError:
-        mpi_print(f"Error: Input file {config_path} not found.")
-        raise
+        raise ConfigParseError(f"Error: Input file {config_path} not found.")
+
 
     
     config.validate(mpi_print)
