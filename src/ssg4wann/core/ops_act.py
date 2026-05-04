@@ -1,5 +1,5 @@
 import numpy as np
-from .wigner import rotation_to_cubic_dmatrix
+from .cartesian_tensors import rotation_to_cubic_dmatrix
 from dataclasses import InitVar, dataclass
 
 from .constants import sigma_x, sigma_y, sigma_z, TOL_SPIN_DET, TOL_ROTATION_AXIS, TOL_MATRIX_ZERO, PI

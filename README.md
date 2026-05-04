@@ -103,12 +103,12 @@ sw.quick_run(workdir="path/to/your/workdir", config_path="path/to/your/sg.in")
 
 ```bash
 cd path/to/your/workdir
-ssgsymm
+ssg4wann
 ```
 or you can specify the config file path with the `-c` flag and the working directory with the `-w` flag:
 
 ```bash
-ssgsymm -c config.in -w path/to/your/workdir
+ssg4wann -c config.in -w path/to/your/workdir
 ```
 
 ### 3) local parallel run example
@@ -117,7 +117,7 @@ install `mpi4py` and an MPI implementation (e.g., OpenMPI, MPICH, Intel MPI) in 
 ```bash
 
 mpirun --version
-mpirun -np 4 ssgsymm -c config.in -w path/to/your/workdir
+mpirun -np 4 ssg4wann -c config.in -w path/to/your/workdir
 ```
 
 Note: When running in parallel in your local environment, you can control the number of processes with the -np flag. To prevent out-of-memory (OOM) issues, fewer processes may be safer for large structural systems.
@@ -136,7 +136,7 @@ Prepare a bash script (e.g., `job.lsf` or `job.sh`) in your work directory. Load
 # ... your job scheduler directives (e.g., #SBATCH) ...
 module load mpi/2021.6.0
 source /path/to/your/.venv/bin/activate
-mpirun -np 56 ssgsymm -c config.in -w path/to/your/workdir
+mpirun -np 56 ssg4wann -c config.in -w path/to/your/workdir
 ```
 
 

@@ -5,11 +5,6 @@ import re
 from ..exceptions import ConfigParseError
 from .constants import DEFAULT_ORBITALS
 
-DEFAULT_ORBITALS = {
-    1: ['pz', 'px', 'py'],
-    2: ['dz2', 'dxz', 'dyz', 'dx2-y2', 'dxy'],
-    3: ['fz3', 'fxz2', 'fyz2', 'fz(x2-y2)', 'fxyz', 'fx(x2-3y2)', 'fy(3x2-y2)']
-}
 
 @dataclass
 class WannOrb:

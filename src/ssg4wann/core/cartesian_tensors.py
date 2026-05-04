@@ -1,6 +1,6 @@
 import numpy as np
 from itertools import permutations
-from .constants import TOL_WIGNER_NORM, DEFAULT_ORBITALS
+from .constants import TOL_TENSOR_NORM, DEFAULT_ORBITALS
 from ..exceptions import WannierMatchError, AngularMomentumError
 
 def rotation_to_cubic_dmatrix(R_cart: np.ndarray, L: int, obseq: dict) -> np.ndarray:
@@ -98,9 +98,9 @@ def rotation_to_cubic_dmatrix(R_cart: np.ndarray, L: int, obseq: dict) -> np.nda
     else:
         raise AngularMomentumError(f"the function only supports L=0,1,2,3 but got L={L}")
     
-    D_cubic[np.abs(D_cubic) < TOL_WIGNER_NORM] = 0.0
+    D_cubic[np.abs(D_cubic) < TOL_TENSOR_NORM] = 0.0
     det = np.linalg.det(D_cubic)
-    if abs(det) - 1.0 > TOL_WIGNER_NORM:
+    if abs(det) - 1.0 > TOL_TENSOR_NORM:
         raise ValueError(f"the calculated D_cubic matrix of the rotation matrix {R_cart} has determinant {det}, which is not close to 1. d_cubic={D_cubic}. Please check the input rotation matrix.")
     
 

@@ -3,7 +3,7 @@ import numpy as np
 TOL_SPIN_DET = 1e-3
 TOL_ROTATION_AXIS = 1e-2    
 TOL_MATRIX_ZERO = 1e-4      
-TOL_WIGNER_NORM = 1e-2      
+TOL_TENSOR_NORM = 1e-2      
 
 
 TOL_WANNIER_MATCH = 1e-3    
