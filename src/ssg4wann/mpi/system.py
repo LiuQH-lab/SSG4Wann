@@ -129,6 +129,7 @@ def mpi_map(func, iterable, USE_MPI, comm=None, desc="Processing"):
     is_cluster = any(env in os.environ for env in ['SLURM_JOB_ID', 'PBS_JOBID', 'LSB_JOBID'])
 
     if not USE_MPI:
+        out_terminal = None
         if is_cluster:
             pbar = tqdm(
                 iterable, 
@@ -152,7 +153,7 @@ def mpi_map(func, iterable, USE_MPI, comm=None, desc="Processing"):
         
         results = [func(task) for task in pbar]
     
-        if hasattr(out_terminal, 'close') and out_terminal is not sys.stderr:
+        if out_terminal is not None and hasattr(out_terminal, 'close') and out_terminal is not sys.stderr:
             out_terminal.close()
             
         return results
