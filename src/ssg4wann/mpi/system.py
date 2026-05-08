@@ -201,9 +201,57 @@ def mpi_map(func, iterable, USE_MPI, comm=None, desc="Processing"):
     if rank == 0 and out_terminal is not None and hasattr(out_terminal, 'close') and out_terminal is not sys.stderr:
         out_terminal.close()
         
-    gathered = comm.gather(local_results, root=0)
+    # gathered = comm.gather(local_results, root=0)
 
-    if rank == 0:
-        return [item for sublist in gathered for item in sublist]
+    # if rank == 0:
+    #     return [item for sublist in gathered for item in sublist]
+    # else:
+    #     return None
+    import pickle
+    import uuid
+    from mpi4py import MPI
+    local_bytes = pickle.dumps(local_results)
+    local_size = len(local_bytes)
+
+    total_size = comm.allreduce(local_size, op=MPI.SUM)
+    
+    SAFE_LIMIT_BYTES = 1.7 * 1024**3 
+    
+    if total_size < SAFE_LIMIT_BYTES:
+
+        gathered = comm.gather(local_results, root=0)
+        
+        if rank == 0:
+            return [item for sublist in gathered for item in sublist]
+        else:
+            return None
+            
     else:
-        return None
+        if rank == 0:
+            print(f"\n[MPI Auto-Fallback] Payload size ({total_size/1024**3:.2f} GB) exceeded safe limits. Utilizing I/O buffer...", flush=True)
+
+            session_id = uuid.uuid4().hex[:8]
+        else:
+            session_id = None
+            
+        session_id = comm.bcast(session_id, root=0)
+        
+        temp_filename = f".ssg_mpi_buf_{session_id}_rank_{rank}.pkl"
+        with open(temp_filename, "wb") as f:
+            f.write(local_bytes)
+            
+
+        comm.Barrier()
+        
+        if rank == 0:
+            gathered = []
+            for i in range(size):
+                file_to_read = f".ssg_mpi_buf_{session_id}_rank_{i}.pkl"
+                with open(file_to_read, "rb") as f:
+
+                    gathered.append(pickle.load(f))
+                os.remove(file_to_read) 
+                
+            return [item for sublist in gathered for item in sublist]
+        else:
+            return None
