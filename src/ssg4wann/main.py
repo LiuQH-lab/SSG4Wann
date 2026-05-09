@@ -103,10 +103,13 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
             resultsent = mpi_map(ent_loop, LatSet, USE_MPI, comm, desc="Symmetrization processing")
             
             # write symmetrized entries
-            mpi_print('finish analyzing, writing symmetrized hr file...')
             if rank == 0:
+                print("analyzing Hermitian symmetrization results...")
                 Hsymm = [item for sublist in resultsent for item in sublist]
-                outwrite(workdir, config.seed, reco = Hsymm, num_wann = num_wann, nrpts = nrptssymm, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel)
+                tot_num_wann = num_wann if config.NONCOLLINEAR_channel else num_wann * 2
+                print('finish analyzing, writing symmetrized hr file...')
+                HsymmHerm = hr.hermitize_hr(Hsymm, tot_num_wann)
+                outwrite(workdir, config.seed, reco = HsymmHerm, num_wann = num_wann, nrpts = nrptssymm, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel)
             mpi_print('Symmetrization finished!')
 
 

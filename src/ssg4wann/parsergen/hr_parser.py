@@ -206,13 +206,68 @@ class hr:
                 checkpass = False
         if checkpass:
             print(f"hrdiff check passed for operator index {index}!")
+    @staticmethod
 
-
-
-
-
+    def hermitize_hr(Hsymm, total_wann):
         
+        matrix_hr = {}
 
 
+        for item in Hsymm:
+            key_tuple, val = item
+            Rx, Ry, Rz, i, j = key_tuple
+            R_vec = (Rx, Ry, Rz)
+
+            if R_vec not in matrix_hr:
+                matrix_hr[R_vec] = np.zeros((total_wann, total_wann), dtype=complex)
+
+
+            idx_i = i - 1
+            idx_j = j - 1
+
+
+            matrix_hr[R_vec][idx_i, idx_j] = val
+
+
+        hermitian_hr = {}
         
+        for R_vec, mat in matrix_hr.items():
+            Rx, Ry, Rz = R_vec
+            minus_R_vec = (-Rx, -Ry, -Rz)
+
+
+            if minus_R_vec in matrix_hr:
+                mat_minus_R = matrix_hr[minus_R_vec]
+            else:
+
+                mat_minus_R = np.zeros_like(mat)
+
+
+            hermitian_mat = 0.5 * (mat + mat_minus_R.conj().T)
+            
+            hermitian_hr[R_vec] = hermitian_mat
+        HsymmHermi = []
+        
+        for R_vec, mat in hermitian_hr.items():
+            Rx, Ry, Rz = R_vec
+            
+            for idx_i in range(total_wann):
+                for idx_j in range(total_wann):
+                    i = idx_i + 1
+                    j = idx_j + 1
+
+                    val = complex(mat[idx_i, idx_j])
+
+                    HsymmHermi.append([(Rx, Ry, Rz, i, j), val])
+        
+        return HsymmHermi
+
+
+
+
+
+            
+
+
+            
 
