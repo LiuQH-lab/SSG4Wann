@@ -5,7 +5,7 @@ import numpy as np
 from ..core.constants import TOL_MATRIX_ZERO
 from ..exceptions import WannierMatchError, SpinRotationError
     
-def calc_op(idx_op, soc, permutation, orbSpin, orbitals, hr_entry, spin_direction, obseq):
+def calc_op(idx_op, soc, permutation, orbSpin, orbitals, hr_entry, spin_direction, obseq, config):
     """Calculate the explicit expression of each symmetry operation on the Wannier function subspaces and the generated Lattices."""
         
     idx, op = idx_op
@@ -19,13 +19,17 @@ def calc_op(idx_op, soc, permutation, orbSpin, orbitals, hr_entry, spin_directio
     for wann in orbSpin:
         hopnew = operator.i_find(wann.global_index, repdict, orbSpin, obseq)
         local_actdict[(idx, wann.global_index)] = hopnew
+    if config.extend_LatVec:
+        for Rtu, block in hr_entry.items():
+            for a, b in product(orbitals, orbitals):
+                Lat = np.array(Rtu).reshape(3, 1)
+                Latii = np.floor(operator.matrix @ (Lat + a.tau) + operator.translation) - np.floor(operator.matrix @ b.tau + operator.translation)
+                LatNew = tuple(Latii.flat)
+                local_LatSet.add(LatNew)
+    else:
+        for Rtu, block in hr_entry.items():
+            local_LatSet.add(Rtu)
         
-    for Rtu, block in hr_entry.items():
-        for a, b in product(orbitals, orbitals):
-            Lat = np.array(Rtu).reshape(3, 1)
-            Latii = np.floor(operator.matrix @ (Lat + a.tau) + operator.translation) - np.floor(operator.matrix @ b.tau + operator.translation)
-            LatNew = tuple(Latii.flat)
-            local_LatSet.add(LatNew)
             
     
     return idx, local_op, local_actdict, local_LatSet

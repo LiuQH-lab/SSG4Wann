@@ -181,7 +181,7 @@ class hr:
             Hk += block["mat"] * phase
             
         return Hk
-
+    
     @staticmethod
     def hr2bds(kpoint, num_wann, hr_entry, permuK, permutation):
         matrix_hr = hr.convert(hr_entry, num_wann)
@@ -206,8 +206,9 @@ class hr:
                 checkpass = False
         if checkpass:
             print(f"hrdiff check passed for operator index {index}!")
-    @staticmethod
 
+
+    @staticmethod
     def hermitize_hr(Hsymm, total_wann):
         
         matrix_hr = {}
@@ -221,31 +222,41 @@ class hr:
             if R_vec not in matrix_hr:
                 matrix_hr[R_vec] = np.zeros((total_wann, total_wann), dtype=complex)
 
-
             idx_i = i - 1
             idx_j = j - 1
 
-
             matrix_hr[R_vec][idx_i, idx_j] = val
 
-
         hermitian_hr = {}
+        processed_R = set() 
         
+
         for R_vec, mat in matrix_hr.items():
+            if R_vec in processed_R:
+                continue
+                
             Rx, Ry, Rz = R_vec
             minus_R_vec = (-Rx, -Ry, -Rz)
 
-
             if minus_R_vec in matrix_hr:
+
                 mat_minus_R = matrix_hr[minus_R_vec]
+                
+                hermitian_mat_R = 0.5 * (mat + mat_minus_R.conj().T)
+                
+                hermitian_mat_minus_R = hermitian_mat_R.conj().T
+                
+                hermitian_hr[R_vec] = hermitian_mat_R
+                hermitian_hr[minus_R_vec] = hermitian_mat_minus_R
             else:
 
-                mat_minus_R = np.zeros_like(mat)
+                hermitian_hr[R_vec] = mat
+                hermitian_hr[minus_R_vec] = mat.conj().T
+
+            processed_R.add(R_vec)
+            processed_R.add(minus_R_vec)
 
 
-            hermitian_mat = 0.5 * (mat + mat_minus_R.conj().T)
-            
-            hermitian_hr[R_vec] = hermitian_mat
         HsymmHermi = []
         
         for R_vec, mat in hermitian_hr.items():
@@ -261,8 +272,6 @@ class hr:
                     HsymmHermi.append([(Rx, Ry, Rz, i, j), val])
         
         return HsymmHermi
-
-
 
 
 

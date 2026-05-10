@@ -23,7 +23,8 @@ class Config:
     hard_ave: bool = False
     spin_direction: RowVec | None = None
     symm_output: bool = False
-
+    extend_LatVec: bool = True
+    forced_hermitianize: bool = False
     def validate(self, mpi_print: Callable) -> None:
         if self.bands_trans and not self.kpath_segments:
             raise ConfigParseError("Error: 'bands_trans' is True, but no 'kpoint_path' block found in sg.in")
@@ -125,7 +126,10 @@ def infoload(config_path: str, rank: int) -> Config:
                                 raise ConfigParseError(f"Warning: Wrong spin_direction {line}")
                         else:
                             raise ConfigParseError(f"Warning: spin_direction needs 3 components in line: {line}")
-
+                    case 'extend_latvec':
+                        config.extend_LatVec = _parse_bool(val)
+                    case 'forced_hermitianize':
+                        config.forced_hermitianize = _parse_bool(val)
     except FileNotFoundError:
         raise ConfigParseError(f"Error: Input file {config_path} not found.")
 

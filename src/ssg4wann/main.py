@@ -65,7 +65,8 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
         orbitals=orbitals, 
         hr_entry=hr_entry,
         spin_direction=config.spin_direction,
-        obseq= obseq
+        obseq= obseq,
+        config=config
         )
         mpi_print(f"Starting  operation expressions calculation...")
 
@@ -104,12 +105,15 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
             
             # write symmetrized entries
             if rank == 0:
-                print("analyzing Hermitian symmetrization results...")
+                
                 Hsymm = [item for sublist in resultsent for item in sublist]
-                tot_num_wann = num_wann if config.NONCOLLINEAR_channel else num_wann * 2
+                if config.forced_hermitianize:
+                    print("analyzing Hermitian symmetrization results...")
+                    tot_num_wann = num_wann if config.NONCOLLINEAR_channel else num_wann * 2
+                    
+                    Hsymm = hr.hermitize_hr(Hsymm, tot_num_wann)
                 print('finish analyzing, writing symmetrized hr file...')
-                HsymmHerm = hr.hermitize_hr(Hsymm, tot_num_wann)
-                outwrite(workdir, config.seed, reco = HsymmHerm, num_wann = num_wann, nrpts = nrptssymm, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel)
+                outwrite(workdir, config.seed, reco = Hsymm, num_wann = num_wann, nrpts = nrptssymm, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel)
             mpi_print('Symmetrization finished!')
 
 

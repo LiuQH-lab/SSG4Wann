@@ -27,7 +27,8 @@ spin_direction = 0 0 1
 
 # output the OSSG information
 symm_output = True
-
+extend_latvec = False
+forced_hermitianize = False
 begin kpoint_path
 G 0.0000000000 0.0000000000 0.0000000000 H 0.5000000000 -0.50000000000 0.50000000000    
 H 0.5000000000 -0.50000000000 0.50000000000 N 0.000000000 0.000000000 0.50000000000     
