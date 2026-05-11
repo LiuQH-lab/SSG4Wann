@@ -107,20 +107,20 @@ def rotation_to_cubic_dmatrix(R_cart: np.ndarray, L: int, obseq: dict) -> np.nda
     
 
 
-    if obseq and L in DEFAULT_ORBITALS:
-        default_order = DEFAULT_ORBITALS[L]
+    # if obseq and L in DEFAULT_ORBITALS:
+    #     default_order = DEFAULT_ORBITALS[L]
         
 
 
-        target_obseq = obseq.get(L, [])
+    #     target_obseq = obseq.get(L, [])
             
 
-        if target_obseq:
-            try:
-                perm_indices = [default_order.index(o) for o in target_obseq]
-                D_cubic = D_cubic[np.ix_(perm_indices, perm_indices)]
-            except ValueError as e:
-                raise WannierMatchError(f"unknown orbital in obseq: {e}")
+    #     if target_obseq:
+    #         try:
+    #             perm_indices = [default_order.index(o) for o in target_obseq]
+    #             D_cubic = D_cubic[np.ix_(perm_indices, perm_indices)]
+    #         except ValueError as e:
+    #             raise WannierMatchError(f"unknown orbital in obseq: {e}")
                 
     return D_cubic
 

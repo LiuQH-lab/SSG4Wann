@@ -197,4 +197,5 @@ def proj_seq(win_path: str) -> dict:
     if custom_orders == {}:
         print(f"Warning: no detailed projection information found in {win_path}! the projection sequence will be set to default order")
     custom_orders = DEFAULT_ORBITALS | custom_orders
+
     return custom_orders

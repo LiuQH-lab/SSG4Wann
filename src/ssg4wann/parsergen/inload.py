@@ -35,9 +35,9 @@ class Config:
             
         if self.NONCOLLINEAR_channel is None:
             raise ConfigParseError("Error: NONCOLLINEAR_channel variable is not set.")
-        if self.NONCOLLINEAR_channel and not self.chnl:
-            raise ConfigParseError("Error: NONCOLLINEAR_channel is True but chnl is False.")
 
+        if self.NONCOLLINEAR_channel == False and self.chnl == False:
+            raise ConfigParseError("Error: Both NONCOLLINEAR_channel and chnl cannot be False. If you are doing collinear calculation, set chnl = True and NONCOLLINEAR_channel = False.")
 
 
         if not self.bands_trans:

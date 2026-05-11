@@ -2,7 +2,7 @@ import numpy as np
 from .cartesian_tensors import rotation_to_cubic_dmatrix
 from dataclasses import InitVar, dataclass
 
-from .constants import sigma_x, sigma_y, sigma_z, TOL_SPIN_DET, TOL_ROTATION_AXIS, TOL_MATRIX_ZERO, PI
+from .constants import sigma_x, sigma_y, sigma_z, TOL_SPIN_DET, TOL_ROTATION_AXIS, TOL_MATRIX_ZERO, PI, DEFAULT_ORBITALS
 from ..exceptions import SpinRotationError, WannierMatchError
 
 type ColVec = np.ndarray 
@@ -76,9 +76,7 @@ class ops_actclass:
 
     def i_find(self, i, repdict, orbSpin, obseq) -> list[tuple[int, complex]]:
         from .map import revmapsp, formapsp
-        # porbdic = {i: orb for i, orb in enumerate(orbseq[1], start=1)}
-        # dorbdic = {i: orb for i, orb in enumerate(orbseq[2], start=1)}
-        # forbdic = {i: orb for i, orb in enumerate(orbseq[3], start=1)}
+
         label, L, tau, spin = formapsp(i, orbSpin)
         tauNew = self.tau_find(tau)
         LNew = L
@@ -100,10 +98,14 @@ class ops_actclass:
                 
                 if L == 0:
                     j = 1
-                elif L in obseq:
-                    if label not in obseq[L]:
-                        raise WannierMatchError(f"Error in calculating the new orbital index for i={i}, label={label}, L={L}. The label is not found in the orbital sequence for L={L}. Check your input symmetry operation or wannier90.win file!!!")
-                    j = obseq[L].index(label) + 1
+                # elif L in obseq:
+                #     if label not in obseq[L]:
+                #         raise WannierMatchError(f"Error in calculating the new orbital index for i={i}, label={label}, L={L}. The label is not found in the orbital sequence for L={L}. Check your input symmetry operation or wannier90.win file!!!")
+                #     j = obseq[L].index(label) + 1
+                elif L in DEFAULT_ORBITALS:
+                    if label not in DEFAULT_ORBITALS[L]:
+                        raise WannierMatchError(f"Error in calculating the new orbital index for i={i}, label={label}, L={L}. The label is not found in the default orbital sequence for L={L}. Check your input symmetry operation or wannier90.win file!!!")
+                    j = DEFAULT_ORBITALS[L].index(label) + 1
                 else:
                     raise WannierMatchError(f"Unsupported angular momentum L={L}")
                 basvec[j-1] = 1.0
@@ -116,8 +118,10 @@ class ops_actclass:
                 for AngindNew in Angind:
                     if L == 0:
                         labelNew = label
-                    elif L in obseq:
-                        labelNew = obseq[L][AngindNew - 1]
+                    # elif L in obseq:
+                    #     labelNew = obseq[L][AngindNew - 1]
+                    elif L in DEFAULT_ORBITALS:
+                        labelNew = DEFAULT_ORBITALS[L][AngindNew - 1]
                     else:
                         raise WannierMatchError(f"Unsupported angular momentum L={L}")
                     coe = SpindNew * (basvecNew[AngindNew - 1, 0])
