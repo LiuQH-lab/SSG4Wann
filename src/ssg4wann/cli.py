@@ -8,6 +8,7 @@ from .main import avg_kernel
 from .version import __version__
 from .mpi.system import mpi_init
 from .exceptions import ConfigParseError
+from .core.wannob   import proj_seq
 def detect_system_settings(workdir: Path) -> dict:
 
     params = {
@@ -162,7 +163,8 @@ def ssg4wann():
                 if is_noncollinear in ['false', 'f']:
                     mpi_print(f"          Warning: Detected collinear system! Please specify the correct `spin_direction` in the generated config file to ensure correct symmetrization results. The SSG4Wann refuses to run with the default config for collinear systems to prevent incorrect symmetrization results!")
                     should_exit = True
-                    
+                
+        
             except Exception as e:
                 mpi_print(f"[Error] Failed to write config file: {e}")
                 if USE_MPI:
