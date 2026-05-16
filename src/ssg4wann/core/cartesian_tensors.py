@@ -3,7 +3,7 @@ from itertools import permutations
 from .constants import TOL_TENSOR_NORM, DEFAULT_ORBITALS
 from ..exceptions import WannierMatchError, AngularMomentumError
 
-def rotation_to_cubic_dmatrix(R_cart: np.ndarray, L: int, obseq: dict) -> np.ndarray:
+def rotation_to_cubic_dmatrix(R_cart: np.ndarray, L: int) -> np.ndarray:
     """
     Transform rotation matrix to the expression in wannier orbital subspace.
     The sequence is:

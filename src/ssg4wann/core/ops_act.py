@@ -74,7 +74,7 @@ class ops_actclass:
         raise NotImplementedError("the inheritance class must implement the time reversal property, which is crucial for determining the correct spin rotation behavior in the i_find method. Please implement this property in the Mops and Sops classes accordingly.")
     
 
-    def i_find(self, i, repdict, orbSpin, obseq) -> list[tuple[int, complex]]:
+    def i_find(self, i, repdict, orbSpin) -> list[tuple[int, complex]]:
         from .map import revmapsp, formapsp
 
         label, L, tau, spin = formapsp(i, orbSpin)
@@ -98,10 +98,7 @@ class ops_actclass:
                 
                 if L == 0:
                     j = 1
-                # elif L in obseq:
-                #     if label not in obseq[L]:
-                #         raise WannierMatchError(f"Error in calculating the new orbital index for i={i}, label={label}, L={L}. The label is not found in the orbital sequence for L={L}. Check your input symmetry operation or wannier90.win file!!!")
-                #     j = obseq[L].index(label) + 1
+          
                 elif L in DEFAULT_ORBITALS:
                     if label not in DEFAULT_ORBITALS[L]:
                         raise WannierMatchError(f"Error in calculating the new orbital index for i={i}, label={label}, L={L}. The label is not found in the default orbital sequence for L={L}. Check your input symmetry operation or wannier90.win file!!!")
@@ -118,8 +115,7 @@ class ops_actclass:
                 for AngindNew in Angind:
                     if L == 0:
                         labelNew = label
-                    # elif L in obseq:
-                    #     labelNew = obseq[L][AngindNew - 1]
+                
                     elif L in DEFAULT_ORBITALS:
                         labelNew = DEFAULT_ORBITALS[L][AngindNew - 1]
                     else:
@@ -139,8 +135,8 @@ class ops_actclass:
         return tauNew - np.floor(tauNew)
    
 
-    def rep_find(self, obseq) -> dict:
-        prep, drep, frep = rotation_to_cubic_dmatrix(self.rot_cart, L=1, obseq=obseq), rotation_to_cubic_dmatrix(self.rot_cart, L=2, obseq=obseq), rotation_to_cubic_dmatrix(self.rot_cart, L=3, obseq=obseq)
+    def rep_find(self) -> dict:
+        prep, drep, frep = rotation_to_cubic_dmatrix(self.rot_cart, L=1), rotation_to_cubic_dmatrix(self.rot_cart, L=2), rotation_to_cubic_dmatrix(self.rot_cart, L=3)
         repdict = {0: np.array([[1]]) , 1: np.array(prep.tolist(), dtype=float), 2: np.array(drep.tolist(), dtype=float), 3: np.array(frep.tolist(), dtype=float)}
         return repdict
     

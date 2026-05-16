@@ -5,19 +5,19 @@ import numpy as np
 from ..core.constants import TOL_MATRIX_ZERO
 from ..exceptions import WannierMatchError, SpinRotationError
     
-def calc_op(idx_op, soc, permutation, orbSpin, orbitals, hr_entry, spin_direction, obseq, config):
+def calc_op(idx_op, soc, permutation, orbSpin, orbitals, hr_entry, spin_direction, config):
     """Calculate the explicit expression of each symmetry operation on the Wannier function subspaces and the generated Lattices."""
         
     idx, op = idx_op
     operator, conj_factor = markjudge(soc, op, permutation=permutation, spin_direction=spin_direction)
-    repdict = operator.rep_find(obseq)
+    repdict = operator.rep_find()
 
     local_op = [operator, conj_factor]
     local_actdict = {}
     local_LatSet = set()
     
     for wann in orbSpin:
-        hopnew = operator.i_find(wann.global_index, repdict, orbSpin, obseq)
+        hopnew = operator.i_find(wann.global_index, repdict, orbSpin)
         local_actdict[(idx, wann.global_index)] = hopnew
     if config.extend_LatVec:
         for Rtu, block in hr_entry.items():

@@ -14,6 +14,9 @@ chnl = True
 # transform hr file to band structure data
 bands_trans = False
 
+# the hr file transformed to the band structure
+use_hr_file = wannier90_symmed_hr.dat
+
 # number of k-points for band between each 2 high-symmetry k points
 bands_num_points = 100
 

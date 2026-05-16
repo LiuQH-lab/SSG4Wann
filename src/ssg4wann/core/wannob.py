@@ -83,27 +83,43 @@ def lat(content):
         raise ConfigParseError("No valid 'begin unit_cell_cart ... end unit_cell_cart' block found in the .win file. Please check your .win file format and ensure it contains a properly formatted unit cell section.")
 
 def coordi(content):
-    pattern = re.compile(r'begin atoms_cart(.*?)end atoms_cart', re.DOTALL | re.IGNORECASE)
-    section = pattern.search(content)
-    permutation, permuK = lat(content)
+    pattern_frac = re.compile(r'begin atoms_frac(.*?)end atoms_frac', re.DOTALL | re.IGNORECASE)
+    pattern_cart = re.compile(r'begin atoms_cart(.*?)end atoms_cart', re.DOTALL | re.IGNORECASE)
     
-    if section:
-        atoms = section.group(1).strip().splitlines()
-        posi = []
-        
+    section_frac = pattern_frac.search(content)
+    section_cart = pattern_cart.search(content)
+    
+    permutation, permuK = lat(content)
+    posi = []
+    
+    if section_frac:
+        atoms = section_frac.group(1).strip().splitlines()
         for line in atoms:
             parts = line.split()
-            if len(parts) == 4:
+            if len(parts) >= 4:  
+                element = parts[0]
+                coordinates = [float(parts[1]), float(parts[2]), float(parts[3])]
+                posi.append([element, coordinates])
+        return posi
+        
+    elif section_cart:
+        atoms = section_cart.group(1).strip().splitlines()
+        for line in atoms:
+            parts = line.split()
+            if len(parts) >= 4:
                 element = parts[0]
                 cart_coe = np.array([float(parts[1]), float(parts[2]), float(parts[3])]).reshape(3, 1)
                 latt_coe = np.linalg.inv(permutation) @ cart_coe
-                coordinates = [latt_coe[i][0] for i in range(0,3)] 
+                coordinates = [latt_coe[i][0] for i in range(0, 3)] 
                 posi.append([element, coordinates])
-        
         return posi
+        
     else:
-        raise ConfigParseError("No valid 'begin atoms_cart ... end atoms_cart' block found in the .win file. Please check your .win file format and ensure it contains a properly formatted atoms section.")
-
+        raise ConfigParseError(
+            "No valid 'begin atoms_cart ...' or 'begin atoms_frac ...' block found in the .win file. "
+            "Please check your .win file format."
+        )
+    
 def angmap(label):
     if label == 's':
         L = 0
@@ -198,4 +214,7 @@ def proj_seq(win_path: str) -> dict:
         print(f"Warning: no detailed projection information found in {win_path}! the projection sequence will be set to default order")
     custom_orders = DEFAULT_ORBITALS | custom_orders
 
-    return custom_orders
+    for L, orbs in custom_orders.items():
+            expected_order = [o for o in DEFAULT_ORBITALS[L] if o in orbs]
+            if orbs != expected_order:
+                print(f"Warning: Custom projection sequence for L={L} is{orbs}, but default order ({expected_order})! Ensure the custom order is consistent with the hr file's orbital order to avoid potential mismatches in the symmetrization results.")

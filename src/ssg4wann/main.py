@@ -28,7 +28,7 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
         orbSpin.append(WannOrb(orb.label, orb.L, orb.tau, idx_up, spin='up'))
         orbSpin.append(WannOrb(orb.label, orb.L, orb.tau, idx_dn, spin='dn'))
     orbSpin.sort(key=lambda x: x.global_index)
-
+    
     #Hamiltonian symmetrization
     if config.bands_trans == False: 
         ops_list = None
@@ -42,13 +42,12 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
             POSCAR_gen(permutation, posi, os.path.join(workdir, 'INCAR'), config.spin_direction, config.NONCOLLINEAR_channel, workdir)
             ops_list = usegroup(config.soc, os.path.join(workdir, 'POSCAR'), config.symm_output)
             nsymm = len(ops_list)
-            obseq = proj_seq(os.path.join(workdir, config.winpath))
+            proj_seq(os.path.join(workdir, config.winpath))
         mpi_print(f"Finish loading the Group data: {nsymm} symmetry operations loaded")
         if USE_MPI:
             ops_list = comm.bcast(ops_list, root=0)
             nsymm = comm.bcast(nsymm, root=0)
             hr_entry, num_wann = comm.bcast((hr_entry, num_wann), root=0)
-            obseq = comm.bcast(obseq, root=0)
             comm.barrier()
 
 
@@ -65,7 +64,6 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
         orbitals=orbitals, 
         hr_entry=hr_entry,
         spin_direction=config.spin_direction,
-        obseq= obseq,
         config=config
         )
         mpi_print(f"Starting  operation expressions calculation...")

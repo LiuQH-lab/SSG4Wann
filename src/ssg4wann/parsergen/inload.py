@@ -22,7 +22,7 @@ class Config:
     each_symm: bool = False
     hard_ave: bool = False
     spin_direction: RowVec | None = None
-    symm_output: bool = False
+    symm_output: bool = True
     extend_LatVec: bool = True
     forced_hermitianize: bool = False
     def validate(self, mpi_print: Callable) -> None:
