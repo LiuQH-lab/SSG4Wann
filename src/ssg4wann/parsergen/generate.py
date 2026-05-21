@@ -80,7 +80,7 @@ def outwrite(cwd, seed, reco, num_wann, nrpts, NONCOLLINEAR_channel):
             for (R1, R2, R3, i, j), H in reco:
                 f.write(
                     f"{R1:5d}{R2:5d}{R3:5d}{i:5d}{j:5d}"
-                    f"{H.real:16.6f}{H.imag:16.6f}\n"
+                    f"{H.real:22.16f}{H.imag:22.16f}\n"
                 )
     else:
         symmpath_up = os.path.join(cwd, seed + '.up_symmed_hr.dat')  
@@ -116,12 +116,12 @@ def outwrite(cwd, seed, reco, num_wann, nrpts, NONCOLLINEAR_channel):
             for (R1, R2, R3, i, j), H in reco_up:
                 f_up.write(
                     f"{R1:5d}{R2:5d}{R3:5d}{i:5d}{j:5d}"
-                    f"{H.real:16.6f}{H.imag:16.6f}\n"
+                    f"{H.real:22.16f}{H.imag:22.16f}\n"
                 )
             for (R1, R2, R3, i, j), H in reco_dn:
                 f_dn.write(
                     f"{R1:5d}{R2:5d}{R3:5d}{i:5d}{j:5d}"
-                    f"{H.real:16.6f}{H.imag:16.6f}\n"
+                    f"{H.real:22.16f}{H.imag:22.16f}\n"
                 )
 
 def bandwrite(bandspath, x_axis, eigenvalues, hr4trans, labels):
@@ -138,7 +138,7 @@ def bandwrite(bandspath, x_axis, eigenvalues, hr4trans, labels):
                 if x in dict(labels).keys() and x != 0 :
                     f.write("\n")  
                     if x != x_axis[-1]:
-                        f.write(f"   {x:15.9f}   {e:16.6f}\n")
+                        f.write(f"   {x:15.9f}   {e:25.15f}\n")
             f.write("\n")
 
 
@@ -244,10 +244,10 @@ def POSCAR_gen(lat, posi, INCAR_dir, spin_direction, NONCOLLINEAR_channel, workd
 
 
 def get_sg_template(params: dict) -> str:
-    template = f"""# template input file 
+    template = f"""# input file for the SSG4Wann package, generated automatically at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 # anything following '#', '!' or '//' in a line will be regard as comments
 
-#SOC flag True for OSSG or False for subgroup MSG
+# SOC flag True for OSSG or False for subgroup MSG
 soc = {params['soc']}
 
 # seed name of the Hamiltonian file
