@@ -245,7 +245,7 @@ def POSCAR_gen(lat, posi, INCAR_dir, spin_direction, NONCOLLINEAR_channel, workd
 
 def get_sg_template(params: dict) -> str:
     template = f"""# input file for the SSG4Wann package, generated automatically at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-# anything following '#', '!' or '//' in a line will be regard as comments
+# '#', '!' or '//' will be regard as comments
 
 # SOC flag True for OSSG or False for subgroup MSG
 soc = {params['soc']}

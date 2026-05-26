@@ -98,12 +98,19 @@ def ssg4wann():
     
     parser = build_parser()
     args = parser.parse_args()
+
     config_path = Path(args.config).expanduser().resolve()
- 
+
     if args.workdir is None:
         workdir = config_path.parent
     else:
         workdir = Path(args.workdir).expanduser().resolve()
+        config_path = workdir / config_path.name
+
+    # if config_path is None:
+    #     config_path = workdir / "sg.in"
+    
+
     if args.init:
         if config_path.exists():
             print(f"[Warning] '{config_path.name}' already exists in {workdir}.")

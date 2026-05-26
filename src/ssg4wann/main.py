@@ -40,7 +40,7 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
             hrob = hr(workdir, config.seed, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel)
             hr_entry, num_wann = hrob.hr_entry()
             POSCAR_gen(permutation, posi, os.path.join(workdir, 'INCAR'), config.spin_direction, config.NONCOLLINEAR_channel, workdir)
-            ops_list = usegroup(config.soc, os.path.join(workdir, 'POSCAR'), config.symm_output)
+            ops_list = usegroup(config.soc, os.path.join(workdir, 'POSCAR'), config.symm_output, workdir)
             nsymm = len(ops_list)
             proj_seq(os.path.join(workdir, config.winpath))
         mpi_print(f"Finish loading the Group data: {nsymm} symmetry operations loaded")
@@ -203,7 +203,7 @@ def bds_trans(hrob, workdir, seed, hr4trans, bands_num_points, kpath, permuK, pe
         bandwrite(bandspath, x_axis, eigenvalues, hr4trans, labels)
         mpi_print("Band structure data generation finished!")
 
-def usegroup(soc, POSCAR_path, symm_output):
+def usegroup(soc, POSCAR_path, symm_output, workdir):
     payload = find_spin_group_input_ssg(POSCAR_path)
     try:
         if soc == True:
@@ -216,7 +216,7 @@ def usegroup(soc, POSCAR_path, symm_output):
         raise ConfigParseError(f"Failed to extract symmetry operations for soc '{soc}' from the group finding output. Please check the output POSCAR. Original error: {e}")
 
     if symm_output:
-        write_poscar_ssg_symmetry_dat("ssg_symm.json", payload)
+        write_poscar_ssg_symmetry_dat(os.path.join(workdir, "ssg_symm.json"), payload)
     return ops_list
 
 
