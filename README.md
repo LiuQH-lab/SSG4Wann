@@ -95,13 +95,21 @@ Optional but recommended:
 
 
 ### 1)Installation
-
+It is available on PyPI, and you can install it with pip:
 ```bash
 pip install ssg4wann
 pip install ssg4wann --upgrade
+ssg4wann --version
+```
+
+For more help, in the Command Line Interface (CLI), you can run:
+```bash
+ssg4wann --help
 ```
 
 Python `>= 3.12` is required.
+
+
 ### 2) local minimum serial run example
 
 ensure the following files are prepared in your working directory:
@@ -118,17 +126,25 @@ sw.quick_run()
 also you can set the working directory and the config file path in the `quick_run` function:
 
 ```pythonimport ssg4wann as sw
-sw.quick_run(workdir="path/to/your/workdir", config_path="path/to/your/sg.in")
+sw.quick_run(workdir="path/to/your/workdir", config_name="path/to/your/sg.in")
 ```
 #### b) command line example
 
-```bash
-cd path/to/your/workdir
-ssg4wann
-```
-or you can specify the config file path with the `-c` flag and the working directory with the `-w` flag:
+First, generate the `sg.in` file with the `--init` flag:
 
 ```bash
+cd path/to/your/workdir
+ssg4wann --init
+# or you can specify the directory
+ssg4wann --init -w path/to/your/workdir
+```
+
+you can directly run the code no matter there is a `sg.in` file or not, the code will automatically generate one if it does not exist and run the symmetrization with the generated `sg.in`. But you need to ensure that the generated `sg.in` is correct according to the warnings. Or you can specify the config file path with the `-c` flag and the working directory with the `-w` flag:
+
+```bash
+# directly run
+ssg4wann
+# run with the specified config file and working directory
 ssg4wann -c config.in -w path/to/your/workdir
 ```
 
@@ -347,6 +363,17 @@ Description: whether to output the Hamiltonian with the hermitian forcing proces
 The output Hamiltonian is almost hermitian if an hermitian is inputed. Anyway if it is needed, turn it on.
 
 The tag is set to be `False` by default.
+```
+
+
+#### spinonly_speedup
+```ini
+Tag name:   spinonly_speedup
+Type:       Boolean(True/False)
+Description: whether to perform the direct product structure to speed up the symmetrization.
+When `True`, the program will only perform the NONTRIVIAL SPIN GROUP operation when symmetrization without SOC, and detect the spin-only group to ensure whether the Hamiltonian is real.
+When `False`, the program will perform the whole oriented spin space group operation when calculating without SOC, which is more time-consuming.
+This tag is mainly for testing purposes and is set to `True` by default. 
 ```
 
 ## Output Files

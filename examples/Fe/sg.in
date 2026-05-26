@@ -1,5 +1,5 @@
 # input file for the SSG4Wann package, generated automatically at 2026-05-26 10:46:14
-# anything following '#', '!' or '//' in a line will be regard as comments
+# '#', '!' or '//' will be regard as comments
 
 # SOC flag True for OSSG or False for subgroup MSG
 soc = F
@@ -17,7 +17,7 @@ chnl = True
 bands_trans = False
 
 # the hr file transformed to the band structure
-use_hr_file = wannier90_symmed_hr.dat
+use_hr_file = wannier90.up_symmed_hr.dat
 
 # number of k-points for band between each 2 high-symmetry k points
 bands_num_points = 100
@@ -30,6 +30,9 @@ spin_direction = 1.524205 -1.077775 1.866762
 
 # output the OSSG information
 symm_output = True
+
+# speed up with spin-only group or not
+spinonly_speedup = True
 
 begin kpoint_path
 G 0.0000000000 0.0000000000 0.0000000000 H 0.5000000000 -0.50000000000 0.50000000000    

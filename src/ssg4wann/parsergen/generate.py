@@ -3,7 +3,7 @@ from datetime import datetime
 import os
 import numpy as np
 
-from ..exceptions import ConfigParseError
+from ..exceptions import ConfigParseError, WannierMatchError
 
 def aveterms(entries_op, nsymm):
 
@@ -17,49 +17,7 @@ def aveterms(entries_op, nsymm):
     return avg_dict
 
 
-def write(symmpath, entries_op, num_wann, nsymm): #not applied
-    entsymm = aveterms(entries_op, nsymm)   
-    reco = []
-    for key, val in entsymm.items():
-        R1, R2, R3, i, j = key
-        reco.append(((int(R1), int(R2), int(R3), int(i), int(j)), complex(val)))
-    R_set = { (R1, R2, R3) for (R1, R2, R3, i, j), H in reco }
-    R_list = sorted(R_set)
-    nrpts = len(R_list)
-    Hmap = {key: H for key, H in reco}
-    fulreco = []
-    for R1, R2, R3 in R_list:
-        for j in range(1, num_wann + 1):
-            for i in range(1, num_wann + 1):
-
-                key = (R1, R2, R3, i, j)
-
-                H = Hmap.get(key, 0+0j)   # notexist = 0
-                fulreco.append((key, H))
-
-    fulreco.sort(key=lambda rec: (rec[0][0], rec[0][1], rec[0][2],
-                                  rec[0][4], rec[0][3]))
-
-    with open(symmpath, "w") as f:
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        f.write(f"# written at {now}\n")
-        f.write(f"{num_wann:12d}\n")
-        f.write(f"{nrpts:12d}\n")
-
-        # figuring out
-        degeneracies = [1] * nrpts
-        for i in range(0, nrpts, 15):
-            line = "".join(f"{d:5d}" for d in degeneracies[i:i+15])
-            f.write(line + "\n")
-
-
-        for (R1, R2, R3, i, j), H in fulreco:
-            f.write(
-                f"{R1:5d}{R2:5d}{R3:5d}{i:5d}{j:5d}"
-                f"{H.real:22.16f}{H.imag:22.16f}\n"
-            )
-
-def outwrite(cwd, seed, reco, num_wann, nrpts, NONCOLLINEAR_channel):
+def outwrite(cwd, seed, reco, num_wann, nrpts, NONCOLLINEAR_channel, chnl):
     if NONCOLLINEAR_channel:
         reco.sort(key=lambda rec: (rec[0][0], rec[0][1], rec[0][2],
                                   rec[0][4], rec[0][3]))
@@ -88,10 +46,21 @@ def outwrite(cwd, seed, reco, num_wann, nrpts, NONCOLLINEAR_channel):
         reco_up = []
         reco_dn = []
         for (R1, R2, R3, i, j), H in reco:
-            if i <= num_wann and j <= num_wann:
-                reco_up.append(((R1, R2, R3, i, j), H))
-            else:
-                reco_dn.append(((R1, R2, R3, i-num_wann, j-num_wann), H))
+            match chnl:
+                case True:         # upupdndn format
+                    if i <= num_wann and j <= num_wann:
+                        reco_up.append(((R1, R2, R3, i, j), H))
+                    elif i > num_wann and j > num_wann:
+                        reco_dn.append(((R1, R2, R3, i-num_wann, j-num_wann), H))
+                    else:
+                        raise WannierMatchError(f"Error: Inconsistent channel format. Found i={i}, j={j} with num_wann={num_wann}. Please check the chnl setting and the Hamiltonian file.")
+                case False:      # updnupdn format
+                    if i % 2 == 1 and j % 2 == 1:
+                        reco_up.append(((R1, R2, R3, i, j, H)))
+                    elif i % 2 == 0 and j % 2 == 0:
+                        reco_dn.append(((R1, R2, R3, i-1, j-1), H))
+                    else:
+                        raise WannierMatchError(f"Error: Inconsistent channel format. Found i={i}, j={j} with chnl={chnl}. Please check the chnl setting and the Hamiltonian file.")
         reco_up.sort(key=lambda rec: (rec[0][0], rec[0][1], rec[0][2],
                                   rec[0][4], rec[0][3]))
         reco_dn.sort(key=lambda rec: (rec[0][0], rec[0][1], rec[0][2],

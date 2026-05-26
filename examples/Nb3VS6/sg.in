@@ -1,5 +1,5 @@
 # input file for the SSG4Wann package, generated automatically at 2026-05-26 10:48:58
-# anything following '#', '!' or '//' in a line will be regard as comments
+# '#', '!' or '//' will be regard as comments
 
 # SOC flag True for OSSG or False for subgroup MSG
 soc = F

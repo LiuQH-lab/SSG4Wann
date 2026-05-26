@@ -9,6 +9,7 @@ from .version import __version__
 from .mpi.system import mpi_init
 from .exceptions import ConfigParseError
 from .core.wannob   import proj_seq
+
 def detect_system_settings(workdir: Path) -> dict:
 
     params = {

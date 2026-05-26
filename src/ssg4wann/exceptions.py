@@ -27,3 +27,9 @@ class AngularMomentumError(SSGError):
     The exception raised when the rotation of Wannier functions fails
     """
     pass
+
+class GroupStructureError(SSGError):
+    """
+    The exception raised when the symmetry group structure is not as expected
+    """
+    pass
