@@ -8,6 +8,7 @@ from .core.wannob import wannobs, WannOrb
 from .parsergen import *
 from .mpi import *
 from .core.wannob import proj_seq
+from .core.sogroup import coset_decomposition
 from .exceptions import ConfigParseError
 def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
 
@@ -36,12 +37,18 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
         hr_entry = None
         num_wann = None
         obseq = {}
+        
         if rank == 0:
             hrob = hr(workdir, config.seed, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel)
             hr_entry, num_wann = hrob.hr_entry()
             POSCAR_gen(permutation, posi, os.path.join(workdir, 'INCAR'), config.spin_direction, config.NONCOLLINEAR_channel, workdir)
-            ops_list = usegroup(config.soc, os.path.join(workdir, 'POSCAR'), config.symm_output)
+            ops_list = usegroup(config.soc, os.path.join(workdir, 'POSCAR'), config.symm_output, workdir)
+
+            if config.spinonly_speedup == True and config.hard_ave == False and config.soc == False:
+                is_real_matrix, G_SO, G_NS = coset_decomposition(ops_list)
+                ops_list = G_NS
             nsymm = len(ops_list)
+
             proj_seq(os.path.join(workdir, config.winpath))
         mpi_print(f"Finish loading the Group data: {nsymm} symmetry operations loaded")
         if USE_MPI:
@@ -104,14 +111,20 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
             # write symmetrized entries
             if rank == 0:
                 
+
                 Hsymm = [item for sublist in resultsent for item in sublist]
+
+                if is_real_matrix:
+                    for ent in Hsymm:
+                        ent[1] = ent[1].real
+
                 if config.forced_hermitianize:
                     print("analyzing Hermitian symmetrization results...")
                     tot_num_wann = num_wann if config.NONCOLLINEAR_channel else num_wann * 2
                     
                     Hsymm = hr.hermitize_hr(Hsymm, tot_num_wann)
                 print('finish analyzing, writing symmetrized hr file...')
-                outwrite(workdir, config.seed, reco = Hsymm, num_wann = num_wann, nrpts = nrptssymm, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel)
+                outwrite(workdir, config.seed, reco = Hsymm, num_wann = num_wann, nrpts = nrptssymm, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel, chnl = config.chnl)
             mpi_print('Symmetrization finished!')
 
 
@@ -153,7 +166,7 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
                             flat_reco.append(element)
 
                     if config.each_symm == True:
-                        outwrite(workdir, seed = f"op{idx+1}", reco = flat_reco, num_wann = num_wann, nrpts = nrptssymm, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel)
+                        outwrite(workdir, seed = f"op{idx+1}", reco = flat_reco, num_wann = num_wann, nrpts = nrptssymm, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel, chnl = config.chnl)
 
                     dict_reco = {}
                     for coords, H in flat_reco:
@@ -163,7 +176,7 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
                 full_reco = aveterms(full_reco, nsymm)
                 full_reco = [[coords, H] for coords, H in full_reco.items()]
 
-                outwrite(workdir, seed = f"wannier90", reco = full_reco, num_wann = num_wann, nrpts = nrptssymm, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel)
+                outwrite(workdir, seed = f"wannier90", reco = full_reco, num_wann = num_wann, nrpts = nrptssymm, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel, chnl = config.chnl)
                 mpi_print('Symmetrization finished!')
 
     elif config.bands_trans == True:  #bands transformation
@@ -203,7 +216,7 @@ def bds_trans(hrob, workdir, seed, hr4trans, bands_num_points, kpath, permuK, pe
         bandwrite(bandspath, x_axis, eigenvalues, hr4trans, labels)
         mpi_print("Band structure data generation finished!")
 
-def usegroup(soc, POSCAR_path, symm_output):
+def usegroup(soc, POSCAR_path, symm_output, workdir):
     payload = find_spin_group_input_ssg(POSCAR_path)
     try:
         if soc == True:
@@ -216,7 +229,7 @@ def usegroup(soc, POSCAR_path, symm_output):
         raise ConfigParseError(f"Failed to extract symmetry operations for soc '{soc}' from the group finding output. Please check the output POSCAR. Original error: {e}")
 
     if symm_output:
-        write_poscar_ssg_symmetry_dat("ssg_symm.json", payload)
+        write_poscar_ssg_symmetry_dat(os.path.join(workdir, "ssg_symm.json"), payload)
     return ops_list
 
 

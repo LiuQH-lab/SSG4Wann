@@ -1,8 +1,10 @@
-# template input file 
-# anything following '#', '!' or '//' in a line will be regard as comments
+# input file for the SSG4Wann package, generated automatically at 2026-05-26 10:48:58
+# '#', '!' or '//' will be regard as comments
 
-#SOC flag True for OSSG or False for subgroup MSG
+# SOC flag True for OSSG or False for subgroup MSG
 soc = F
+
+# seed name of the Hamiltonian file
 SeedName='wannier90'  
 
 # .win file
@@ -24,7 +26,7 @@ bands_num_points = 100
 NONCOLLINEAR_channel = False
 
 # direction of the spin polarization
-spin_direction = 1 0 0 
+spin_direction = 1 0 0
 
 # output the OSSG information
 symm_output = True

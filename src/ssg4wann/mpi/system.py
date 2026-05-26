@@ -8,25 +8,6 @@ from tqdm import tqdm
 import os
 from typing import Callable, Any
 
-class RealTerminal:
-    def __init__(self):
-        self.file = None
-        try:
-
-            self.file = open('/dev/tty', 'w')
-        except Exception:
-            self.file = sys.stderr
-
-    def write(self, text):
-        self.file.write(text)
-
-    def flush(self):
-        self.file.flush()
-        
-    def close(self):
-        if self.file is not sys.stderr:
-            self.file.close()
-
 def get_real_terminal():
     try:
         return open('/dev/tty', 'w')
@@ -201,12 +182,6 @@ def mpi_map(func, iterable, USE_MPI, comm=None, desc="Processing"):
     if rank == 0 and out_terminal is not None and hasattr(out_terminal, 'close') and out_terminal is not sys.stderr:
         out_terminal.close()
         
-    # gathered = comm.gather(local_results, root=0)
-
-    # if rank == 0:
-    #     return [item for sublist in gathered for item in sublist]
-    # else:
-    #     return None
     import pickle
     import uuid
     from mpi4py import MPI

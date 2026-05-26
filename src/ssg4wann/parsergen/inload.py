@@ -25,6 +25,8 @@ class Config:
     symm_output: bool = True
     extend_LatVec: bool = True
     forced_hermitianize: bool = False
+    spinonly_speedup: bool = True
+
     def validate(self, mpi_print: Callable) -> None:
         if self.bands_trans and not self.kpath_segments:
             raise ConfigParseError("Error: 'bands_trans' is True, but no 'kpoint_path' block found in sg.in")
@@ -55,7 +57,7 @@ class Config:
             if not self.hr4trans:
                 raise ConfigParseError("Error: 'bands_trans' is True but 'use_hr_file' is not set.")
 
-
+        
 def _parse_bool(val: str) -> bool:
     return val.upper() in ('T', 'TRUE', '.TRUE.', 'true')
 
@@ -130,6 +132,9 @@ def infoload(config_path: str, rank: int) -> Config:
                         config.extend_LatVec = _parse_bool(val)
                     case 'forced_hermitianize':
                         config.forced_hermitianize = _parse_bool(val)
+                    case 'spinonly_speedup':
+                        config.spinonly_speedup = _parse_bool(val)
+                        
     except FileNotFoundError:
         raise ConfigParseError(f"Error: Input file {config_path} not found.")
 

@@ -6,11 +6,12 @@ from ..exceptions import WannierMatchError, AngularMomentumError
 def rotation_to_cubic_dmatrix(R_cart: np.ndarray, L: int) -> np.ndarray:
     """
     Transform rotation matrix to the expression in wannier orbital subspace.
-    The sequence is:
+    The default sequence is:
     L=0: [s]
     L=1: [pz, px, py]
     L=2: [dz2, dxz, dyz, dx2-y2, dxy]
     L=3: [fz3, fxz2, fyz2, fz(x2-y2), fxyz, fx(x2-3y2), fy(3x2-y2)]
+    which is the same as the default sequence of orbitals in Wannier90. 
     """
     R = np.array(R_cart, dtype=float)
     
@@ -103,25 +104,6 @@ def rotation_to_cubic_dmatrix(R_cart: np.ndarray, L: int) -> np.ndarray:
     if abs(det) - 1.0 > TOL_TENSOR_NORM:
         raise ValueError(f"the calculated D_cubic matrix of the rotation matrix {R_cart} has determinant {det}, which is not close to 1. d_cubic={D_cubic}. Please check the input rotation matrix.")
     
-
-    
-
-
-    # if obseq and L in DEFAULT_ORBITALS:
-    #     default_order = DEFAULT_ORBITALS[L]
-        
-
-
-    #     target_obseq = obseq.get(L, [])
-            
-
-    #     if target_obseq:
-    #         try:
-    #             perm_indices = [default_order.index(o) for o in target_obseq]
-    #             D_cubic = D_cubic[np.ix_(perm_indices, perm_indices)]
-    #         except ValueError as e:
-    #             raise WannierMatchError(f"unknown orbital in obseq: {e}")
-                
     return D_cubic
 
 
