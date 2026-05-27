@@ -39,6 +39,7 @@ A MPI-enabled tool for **symmetrizing Wannier tight-binding Hamiltonians** (`*_h
       - [symm\_output tag](#symm_output-tag)
       - [extend\_LatVec tag](#extend_latvec-tag)
       - [forced\_hermitianize](#forced_hermitianize)
+      - [spinonly\_speedup](#spinonly_speedup)
   - [Output Files](#output-files)
   - [Common errors:](#common-errors)
   - [Method Summary](#method-summary)

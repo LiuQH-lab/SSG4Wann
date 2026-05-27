@@ -32,7 +32,7 @@ def coset_decomposition(ops_list: list,
         if spatial_key not in seen_spatial_ops:
             seen_spatial_ops.add(spatial_key)
             G_NS.append(g)
-    is_real_matrix =  True if len(G_SO) == 1 else False
+    is_real_matrix =  False if len(G_SO) == 1 else True
     order_SO = len(G_SO)
     order_NS = len(G_NS)
     if len(ops_list) != order_SO * order_NS:

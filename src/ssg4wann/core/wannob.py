@@ -194,7 +194,7 @@ def proj_seq(win_path: str) -> dict:
         orbs_str = orbs_str.lower()
         orbs_list = [o for o in re.split(r'[,;]', orbs_str) if o]
         
-        current_line_orders = {1: [], 2: [], 3: []}
+        current_line_orders = {0: [], 1: [], 2: [], 3: []}
         for o in orbs_list:
             if o in orb_to_L:
                 current_line_orders[orb_to_L[o]].append(o)
