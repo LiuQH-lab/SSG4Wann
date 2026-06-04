@@ -39,6 +39,7 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
         obseq = {}
         
         if rank == 0:
+            is_real_matrix = False
             hrob = hr(workdir, config.seed, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel)
             hr_entry, num_wann = hrob.hr_entry()
             POSCAR_gen(permutation, posi, os.path.join(workdir, 'INCAR'), config.spin_direction, config.NONCOLLINEAR_channel, workdir)

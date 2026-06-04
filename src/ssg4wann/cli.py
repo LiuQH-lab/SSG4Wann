@@ -108,9 +108,6 @@ def ssg4wann():
         workdir = Path(args.workdir).expanduser().resolve()
         config_path = workdir / config_path.name
 
-    # if config_path is None:
-    #     config_path = workdir / "sg.in"
-    
 
     if args.init:
         if config_path.exists():
