@@ -25,7 +25,7 @@ class hr:
         self.num_wann = None
         self.nrpts = None
         self.rawload()
-        # print(f"finished: num_wann={self.num_wann}, nrpts={self.nrpts}")
+
 
     def rawload(self):
         if self.NONCOLLINEAR_channel or self.hr4trans is not None:
