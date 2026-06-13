@@ -216,6 +216,8 @@ Example skeleton:
 SeedName = 'wannier90'
 soc = False
 use_win = wannier90.win
+tb_mode = False
+tb_precision = 16
 chnl = True
 bands_trans = False
 bands_num_points = 100
@@ -273,6 +275,23 @@ When `True`, the program will lower the symmetry to the corresponding subgroup o
 ```
 
 ### Optional keys
+
+#### tb_mode tag
+```ini
+Tag name:   tb_mode
+Type:       Boolean (True/False)
+Description: read Wannier90 `*_tb.dat` instead of `*_hr.dat`. The Hamiltonian
+block uses the existing HR symmetrization, while the Cartesian position-matrix
+block is symmetrized as a vector operator. The output is `*_symmed_tb.dat`.
+```
+
+#### tb_precision tag
+```ini
+Tag name:   tb_precision
+Type:       Integer
+Description: number of digits after the decimal point in symmetrized tb output.
+The default is 16.
+```
 
 #### chnl tag
 ```ini
@@ -375,6 +394,8 @@ Description: whether to perform the direct product structure to speed up the sym
 When `True`, the program will only perform the NONTRIVIAL SPIN GROUP operation when symmetrization without SOC, and detect the spin-only group to ensure whether the Hamiltonian is real.
 When `False`, the program will perform the whole oriented spin space group operation when calculating without SOC, which is more time-consuming.
 This tag is mainly for testing purposes and is set to `True` by default. 
+It is intentionally not applied in `tb_mode`, because the position-matrix
+block must currently be averaged over the full oriented spin space group.
 ```
 
 ## Output Files
@@ -382,6 +403,7 @@ This tag is mainly for testing purposes and is set to `True` by default.
 Typical output includes symmetrized HR files or band structure data, depending on the configuration:
 
 - `*_symmed_hr.dat`
+- `*_symmed_tb.dat`
 - `*_bands.dat`
 
 Output naming is controlled by seed/config and channel logic in the code.
@@ -414,8 +436,6 @@ The core symmetrization pipeline is conceptually:
 ## License
 This project is licensed under the Apache License, Version 2.0.
 See the LICENSE file for details.
-
-
 
 
 

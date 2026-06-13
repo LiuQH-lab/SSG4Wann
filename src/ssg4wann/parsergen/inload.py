@@ -13,6 +13,7 @@ class Config:
     seed: str = 'wannier90'
     soc: bool | None = None
     winpath: str = ''
+    tb_mode: bool = False
     chnl: bool = True
     bands_trans: bool = False
     bands_num_points: int = 100
@@ -30,9 +31,10 @@ class Config:
     def validate(self, mpi_print: Callable) -> None:
         if self.bands_trans and not self.kpath_segments:
             raise ConfigParseError("Error: 'bands_trans' is True, but no 'kpoint_path' block found in sg.in")
-            
-
-            
+        if self.bands_trans and self.tb_mode:
+            raise ConfigParseError(
+                "Error: 'bands_trans' and 'tb_mode' cannot both be True."
+            )
 
             
         if self.NONCOLLINEAR_channel is None:
@@ -40,7 +42,6 @@ class Config:
 
         if self.NONCOLLINEAR_channel == False and self.chnl == False:
             raise ConfigParseError("Error: Both NONCOLLINEAR_channel and chnl cannot be False. If you are doing collinear calculation, set chnl = True and NONCOLLINEAR_channel = False.")
-
 
         if not self.bands_trans:
             if self.spin_direction is None and self.NONCOLLINEAR_channel:
@@ -110,6 +111,7 @@ def infoload(config_path: str, rank: int) -> Config:
                 match key.lower():
                     case 'seedname': config.seed = val
                     case 'use_win': config.winpath = val
+                    case 'tb_mode': config.tb_mode = _parse_bool(val)
                     case 'use_hr_file': config.hr4trans = val
                     case 'bands_num_points': config.bands_num_points = int(val)
                     case 'soc': config.soc = _parse_bool(val)

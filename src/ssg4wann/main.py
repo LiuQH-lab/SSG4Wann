@@ -10,6 +10,36 @@ from .mpi import *
 from .core.wannob import proj_seq
 from .core.sogroup import coset_decomposition
 from .exceptions import ConfigParseError
+
+
+def _flatten_operation_result(raw_op_data):
+    flat_reco = []
+    for element in raw_op_data:
+        if isinstance(element, list) and (
+            len(element) != 2 or not isinstance(element[0], tuple)
+        ):
+            flat_reco.extend(element)
+        else:
+            flat_reco.append(element)
+    return flat_reco
+
+
+def _average_operation_results(results, nsymm):
+    per_operation = {}
+    terms = []
+    for fallback_idx, item in enumerate(results):
+        if isinstance(item, tuple) and len(item) == 2 and isinstance(item[0], int):
+            idx, raw_op_data = item
+        else:
+            idx, raw_op_data = fallback_idx, item
+        flat_reco = _flatten_operation_result(raw_op_data)
+        per_operation[idx] = flat_reco
+        terms.extend({coords: [value]} for coords, value in flat_reco)
+
+    averaged = aveterms(terms, nsymm)
+    return [[coords, value] for coords, value in averaged.items()], per_operation
+
+
 def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
 
     workdir = dirname(abspath(config_path))
@@ -35,17 +65,37 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
         ops_list = None
         nsymm = None
         hr_entry = None
+        r_entry = None
+        tb_lattice = None
         num_wann = None
         obseq = {}
         
         if rank == 0:
             is_real_matrix = False
-            hrob = hr(workdir, config.seed, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel)
-            hr_entry, num_wann = hrob.hr_entry()
+            if config.tb_mode:
+                tbob = tb(
+                    workdir,
+                    config.seed,
+                    NONCOLLINEAR_channel=config.NONCOLLINEAR_channel,
+                )
+                hr_entry, r_entry, num_wann = tbob.tb_entry()
+                tb_lattice = tbob.lattice
+                if not np.allclose(tb_lattice, permutation):
+                    raise ConfigParseError(
+                        "The lattice vectors in tb.dat and the selected .win file do not match."
+                    )
+            else:
+                hrob = hr(workdir, config.seed, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel)
+                hr_entry, num_wann = hrob.hr_entry()
             POSCAR_gen(permutation, posi, os.path.join(workdir, 'INCAR'), config.spin_direction, config.NONCOLLINEAR_channel, workdir)
             ops_list = usegroup(config.soc, os.path.join(workdir, 'POSCAR'), config.symm_output, workdir)
 
-            if config.spinonly_speedup == True and config.hard_ave == False and config.soc == False:
+            if (
+                config.spinonly_speedup
+                and not config.tb_mode
+                and not config.hard_ave
+                and config.soc is False
+            ):
                 is_real_matrix, G_SO, G_NS = coset_decomposition(ops_list)
                 ops_list = G_NS
             nsymm = len(ops_list)
@@ -55,7 +105,9 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
         if USE_MPI:
             ops_list = comm.bcast(ops_list, root=0)
             nsymm = comm.bcast(nsymm, root=0)
-            hr_entry, num_wann = comm.bcast((hr_entry, num_wann), root=0)
+            hr_entry, r_entry, tb_lattice, num_wann = comm.bcast(
+                (hr_entry, r_entry, tb_lattice, num_wann), root=0
+            )
             comm.barrier()
 
 
@@ -111,8 +163,6 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
             
             # write symmetrized entries
             if rank == 0:
-                
-
                 Hsymm = [item for sublist in resultsent for item in sublist]
 
                 if is_real_matrix:
@@ -124,8 +174,48 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
                     tot_num_wann = num_wann if config.NONCOLLINEAR_channel else num_wann * 2
                     
                     Hsymm = hr.hermitize_hr(Hsymm, tot_num_wann)
-                print('finish analyzing, writing symmetrized hr file...')
-                outwrite(workdir, config.seed, reco = Hsymm, num_wann = num_wann, nrpts = nrptssymm, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel, chnl = config.chnl)
+                if not config.tb_mode:
+                    print('finish analyzing, writing symmetrized hr file...')
+                    outwrite(workdir, config.seed, reco = Hsymm, num_wann = num_wann, nrpts = nrptssymm, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel, chnl = config.chnl)
+
+            if config.tb_mode:
+                r_loop = partial(
+                    calc_r_ent,
+                    num_wann=num_wann,
+                    opset=opset,
+                    actdict=actdict,
+                    r_entry=r_entry,
+                    orbSpin=orbSpin,
+                    nsymm=nsymm,
+                    NONCOLLINEAR_channel=config.NONCOLLINEAR_channel,
+                )
+                mpi_print("Starting position-matrix symmetrization ...")
+                results_r = mpi_map(
+                    r_loop,
+                    LatSet,
+                    USE_MPI,
+                    comm,
+                    desc="Position Matrix Symmetrization",
+                )
+                if rank == 0:
+                    rsymm = [item for sublist in results_r for item in sublist]
+                    if config.forced_hermitianize:
+                        total_wann = (
+                            num_wann
+                            if config.NONCOLLINEAR_channel
+                            else num_wann * 2
+                        )
+                        rsymm = tb.hermitize_r(rsymm, total_wann)
+                    tb.outwrite(
+                        workdir,
+                        config.seed,
+                        tb_lattice,
+                        Hsymm,
+                        rsymm,
+                        num_wann,
+                        config.NONCOLLINEAR_channel,
+
+                    )
             mpi_print('Symmetrization finished!')
 
 
@@ -148,37 +238,71 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
             resultshard = mpi_map(ent_loop, indices, USE_MPI, comm, desc="Symmetrization Each Symmetry Processing")
     
             # write symmetrized entries
-            mpi_print('finish analyzing, writing symmetrized hr operation...')
+            mpi_print('finish analyzing symmetrized Hamiltonian operations...')
             if rank == 0:
-                full_reco = []
-                for item in resultshard:
-                    if isinstance(item, tuple) and len(item) == 2 and isinstance(item[0], int):
-                        idx, raw_op_data = item
-                    else:
-                        idx = resultshard.index(item)
-                        raw_op_data = item
+                Hsymm, H_per_operation = _average_operation_results(
+                    resultshard, nsymm
+                )
+                if not config.tb_mode:
+                    if config.each_symm:
+                        for idx, records in H_per_operation.items():
+                            outwrite(workdir, seed = f"op{idx+1}", reco = records, num_wann = num_wann, nrpts = nrptssymm, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel, chnl = config.chnl)
+                    outwrite(workdir, seed = f"wannier90", reco = Hsymm, num_wann = num_wann, nrpts = nrptssymm, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel, chnl = config.chnl)
 
-                    flat_reco = []
-                    
-                    for element in raw_op_data:
-                        if isinstance(element, list) and (len(element) != 2 or not isinstance(element[0], tuple)):
-                            flat_reco.extend(element)
-                        else:
-                            flat_reco.append(element)
-
-                    if config.each_symm == True:
-                        outwrite(workdir, seed = f"op{idx+1}", reco = flat_reco, num_wann = num_wann, nrpts = nrptssymm, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel, chnl = config.chnl)
-
-                    dict_reco = {}
-                    for coords, H in flat_reco:
-                        dict_reco[coords] = [H] 
-                        full_reco.append(dict_reco)
-
-                full_reco = aveterms(full_reco, nsymm)
-                full_reco = [[coords, H] for coords, H in full_reco.items()]
-
-                outwrite(workdir, seed = f"wannier90", reco = full_reco, num_wann = num_wann, nrpts = nrptssymm, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel, chnl = config.chnl)
-                mpi_print('Symmetrization finished!')
+            if config.tb_mode:
+                r_loop = partial(
+                    calc_r_each,
+                    opset=opset,
+                    LatSet=LatSet,
+                    num_wann=num_wann,
+                    actdict=actdict,
+                    r_entry=r_entry,
+                    orbSpin=orbSpin,
+                    nsymm=1,
+                    NONCOLLINEAR_channel=config.NONCOLLINEAR_channel,
+                )
+                results_r_hard = mpi_map(
+                    r_loop,
+                    indices,
+                    USE_MPI,
+                    comm,
+                    desc="Position Matrix Each Symmetry Processing",
+                )
+                if rank == 0:
+                    rsymm, r_per_operation = _average_operation_results(
+                        results_r_hard, nsymm
+                    )
+                    if config.forced_hermitianize:
+                        total_wann = (
+                            num_wann
+                            if config.NONCOLLINEAR_channel
+                            else num_wann * 2
+                        )
+                        Hsymm = hr.hermitize_hr(Hsymm, total_wann)
+                        rsymm = tb.hermitize_r(rsymm, total_wann)
+                    if config.each_symm:
+                        for idx in sorted(H_per_operation):
+                            tb.outwrite(
+                                workdir,
+                                f"op{idx+1}",
+                                tb_lattice,
+                                H_per_operation[idx],
+                                r_per_operation[idx],
+                                num_wann,
+                                config.NONCOLLINEAR_channel,
+                                config.tb_precision,
+                            )
+                    tb.outwrite(
+                        workdir,
+                        config.seed,
+                        tb_lattice,
+                        Hsymm,
+                        rsymm,
+                        num_wann,
+                        config.NONCOLLINEAR_channel,
+                        config.tb_precision,
+                    )
+            mpi_print('Symmetrization finished!')
 
     elif config.bands_trans == True:  #bands transformation
         hrob = None
@@ -237,8 +361,5 @@ def usegroup(soc, POSCAR_path, symm_output, workdir):
 
 
    
-
-
-
 
 

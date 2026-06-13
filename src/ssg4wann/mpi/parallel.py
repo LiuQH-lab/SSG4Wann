@@ -119,6 +119,123 @@ def calc_each(orig_idx, opset, LatSet, num_wann, actdict, hr_entry, orbSpin, NON
         
     return orig_idx, op_results
 
+
+def calc_r_ent(R, num_wann, opset, actdict, r_entry, orbSpin, nsymm, NONCOLLINEAR_channel):
+    """Group-average the Cartesian position-operator matrix elements for one R."""
+    n_ops = len(opset)
+    R_coords = tuple(int(x) for x in R)
+    target_overlap = R_coords == (0, 0, 0)
+    res = []
+
+    if NONCOLLINEAR_channel:
+        loop_ranges = [(range(1, num_wann + 1), range(1, num_wann + 1))]
+    else:
+        upid = range(1, num_wann + 1)
+        dnid = range(num_wann + 1, 2 * num_wann + 1)
+        loop_ranges = [(upid, upid), (dnid, dnid)]
+
+    def get_entry_value(Rnew_key, i_raw, j_raw, i, j, operator):
+        target_R = r_entry.get(Rnew_key, {})
+        zero = np.zeros(3, dtype=complex)
+        if NONCOLLINEAR_channel:
+            return np.asarray(target_R.get((i_raw, j_raw), zero), dtype=complex)
+        if i_raw > num_wann and j_raw > num_wann:
+            return np.asarray(
+                target_R.get((i_raw - num_wann, j_raw - num_wann), {}).get("dn", zero),
+                dtype=complex,
+            )
+        if i_raw <= num_wann and j_raw <= num_wann:
+            return np.asarray(
+                target_R.get((i_raw, j_raw), {}).get("up", zero),
+                dtype=complex,
+            )
+        raise WannierMatchError(
+            f"Error: spin index mismatch! the indices of the basis is i = {i}, "
+            f"j = {j}, after operated {operator} the new index is i = {i_raw}, "
+            f"j = {j_raw}. Check your spin_direction!!!"
+        )
+
+    for i_range, j_range in loop_ranges:
+        for i, j in product(i_range, j_range):
+            entries_op = np.zeros(3, dtype=complex)
+            noe = 0
+
+            for idx in range(n_ops):
+                operator, conj_factor = opset[idx]
+                Rnew = operator.R_find(i, j, R_coords, orbSpin)
+                Rnew_key = tuple(int(value) for value in Rnew.flat)
+                if Rnew_key not in r_entry:
+                    noe += 1
+                    continue
+
+                transformed_matrix_element = np.zeros(3, dtype=complex)
+                bra_shift = operator.bra_cell_shift_cart(i, orbSpin).reshape(3)
+                proi, proj = actdict[(idx, i)], actdict[(idx, j)]
+
+                for (i_new, coei), (j_new, coej) in product(proi, proj):
+                    entry = get_entry_value(
+                        Rnew_key, i_new, j_new, i, j, operator
+                    ).reshape(3)
+
+                    # tb.dat stores the transformed states after reducing the bra
+                    # to the home cell. Restore its absolute-cell position first.
+                    if Rnew_key == (0, 0, 0) and i_new == j_new:
+                        entry = entry + bra_shift
+
+                    if conj_factor:
+                        contribution = coei * entry.conjugate() * coej.conjugate()
+                    else:
+                        contribution = coei.conjugate() * entry * coej
+                    transformed_matrix_element += contribution
+
+                overlap = 1.0 if target_overlap and i == j else 0.0
+                affine_part = (
+                    transformed_matrix_element
+                    - operator.translation_cart.reshape(3) * overlap
+                )
+                entries_op += np.linalg.solve(operator.rot_cart, affine_part)
+
+            if n_effective := nsymm - noe:
+                entries_op /= n_effective
+            res.append([(*R_coords, int(i), int(j)), entries_op])
+
+    return res
+
+
+def calc_r_each(
+    orig_idx,
+    opset,
+    LatSet,
+    num_wann,
+    actdict,
+    r_entry,
+    orbSpin,
+    NONCOLLINEAR_channel,
+    nsymm,
+):
+    """Calculate position matrix elements transformed by one symmetry operation."""
+    single_opset = [opset[orig_idx]]
+    single_actdict = {
+        (0, orb_i): value
+        for (op_idx, orb_i), value in actdict.items()
+        if op_idx == orig_idx
+    }
+    op_results = []
+    for R in LatSet:
+        op_results.extend(
+            calc_r_ent(
+                R=R,
+                num_wann=num_wann,
+                opset=single_opset,
+                actdict=single_actdict,
+                r_entry=r_entry,
+                orbSpin=orbSpin,
+                nsymm=nsymm,
+                NONCOLLINEAR_channel=NONCOLLINEAR_channel,
+            )
+        )
+    return orig_idx, op_results
+
 def markjudge(soc, op_data, permutation, spin_direction):
     """classify the symmetry operation and calculate the corresponding operator and the conjugation factor. The conjugation factor is used to determine whether the Hamiltonian matrix element should be conjugated when applying the symmetry operation. For M operations, the conjugation factor is determined by the time reversal property of the operation. For S operations, the conjugation factor is determined by the determinant of the spin rotation matrix. """
     
@@ -158,7 +275,6 @@ def markjudge(soc, op_data, permutation, spin_direction):
 
         return operator, conj_factor
     
-
 
 
 

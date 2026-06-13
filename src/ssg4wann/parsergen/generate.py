@@ -225,6 +225,9 @@ SeedName='{params['seedname']}'
 # .win file
 use_win = '{params['use_win']}'
 
+# read and symmetrize *_tb.dat instead of *_hr.dat
+tb_mode = {params.get('tb_mode', 'False')}
+
 # spin channel format: 'updnupdn' (False) or 'upup...dndn...' (True)
 chnl = True
 
@@ -253,4 +256,3 @@ symm_output = True
         template += "\nend kpoint_path\n"
         
     return template
-

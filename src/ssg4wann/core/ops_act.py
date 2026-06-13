@@ -67,6 +67,8 @@ class ops_actclass:
     
     def __post_init__(self, permutation):
         self.rot_cart = permutation @ self.matrix @ np.linalg.inv(permutation)
+        self.lattice_cart = permutation
+        self.translation_cart = permutation @ self.translation
         
     @property
     def is_time_reversed(self) -> bool:
@@ -158,6 +160,16 @@ class ops_actclass:
 
         Rnew = np.floor(Rj + TOL_MATRIX_ZERO) - np.floor(Ri + TOL_MATRIX_ZERO) 
         return Rnew
+
+    def bra_cell_shift_cart(self, i, orbitals):
+        """Cell shift of the transformed bra before it is reduced to the home cell."""
+        from .map import formapsp
+
+        _, _, taui, _ = formapsp(i, orbitals)
+        cell_shift = np.floor(
+            self.matrix @ taui + self.translation + TOL_MATRIX_ZERO
+        )
+        return self.lattice_cart @ cell_shift
     
 @dataclass
 class Mops(ops_actclass):
@@ -165,6 +177,8 @@ class Mops(ops_actclass):
 
     def __post_init__(self, permutation):
         self.rot_cart = permutation @ self.matrix @ np.linalg.inv(permutation)
+        self.lattice_cart = permutation
+        self.translation_cart = permutation @ self.translation
         
         self.U = rotget(self.rot_cart, self.spin_direction)
     @property
@@ -179,6 +193,8 @@ class Sops(ops_actclass):
     def __post_init__(self, permutation):
         self.rev = True if np.linalg.det(self.opSpin) < 0 else False
         self.rot_cart = permutation @ self.matrix @ np.linalg.inv(permutation)
+        self.lattice_cart = permutation
+        self.translation_cart = permutation @ self.translation
        
         self.U = rotget(self.opSpin, self.spin_direction)
     @property
@@ -186,4 +202,3 @@ class Sops(ops_actclass):
         return self.rev
         
     
-
