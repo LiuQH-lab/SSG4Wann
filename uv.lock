@@ -386,7 +386,7 @@ wheels = [
 
 [[package]]
 name = "ssg4wann"
-version = "0.99.9.3"
+version = "1.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "findspingroup" },
