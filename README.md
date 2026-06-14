@@ -217,7 +217,7 @@ SeedName = 'wannier90'
 soc = False
 use_win = wannier90.win
 tb_mode = False
-tb_precision = 16
+output_hr_from_tb = False
 chnl = True
 bands_trans = False
 bands_num_points = 100
@@ -285,12 +285,20 @@ block uses the existing HR symmetrization, while the Cartesian position-matrix
 block is symmetrized as a vector operator. The output is `*_symmed_tb.dat`.
 ```
 
-#### tb_precision tag
+#### output_hr_from_tb tag
 ```ini
-Tag name:   tb_precision
-Type:       Integer
-Description: number of digits after the decimal point in symmetrized tb output.
-The default is 16.
+Tag name:   output_hr_from_tb
+Type:       Boolean (True/False)
+Default:    False
+Description: when `tb_mode = True`, also write the symmetrized Hamiltonian
+block in the standard Wannier90 HR format. The program reuses the Hamiltonian
+already produced during TB symmetrization; it does not perform a second
+symmetrization.
+
+For a non-collinear calculation, the additional output is
+`<SeedName>_symmed_hr.dat`. For a collinear calculation, the additional outputs
+are `<SeedName>.up_symmed_hr.dat` and `<SeedName>.dn_symmed_hr.dat`.
+This tag has no effect when `tb_mode = False`.
 ```
 
 #### chnl tag
@@ -402,7 +410,7 @@ block must currently be averaged over the full oriented spin space group.
 
 Typical output includes symmetrized HR files or band structure data, depending on the configuration:
 
-- `*_symmed_hr.dat`
+- `*_symmed_hr.dat` (also produced from TB mode when `output_hr_from_tb = True`)
 - `*_symmed_tb.dat`
 - `*_bands.dat`
 
@@ -436,10 +444,6 @@ The core symmetrization pipeline is conceptually:
 ## License
 This project is licensed under the Apache License, Version 2.0.
 See the LICENSE file for details.
-
-
-
-
 
 
 

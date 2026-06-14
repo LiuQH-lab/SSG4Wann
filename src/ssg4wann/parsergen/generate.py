@@ -16,6 +16,34 @@ def aveterms(entries_op, nsymm):
     avg_dict = {k: total / nsymm for k, (total, count) in acc.items()}
     return avg_dict
 
+def _flatten_operation_result(raw_op_data):
+    flat_reco = []
+    for element in raw_op_data:
+        if isinstance(element, list) and (
+            len(element) != 2 or not isinstance(element[0], tuple)
+        ):
+            flat_reco.extend(element)
+        else:
+            flat_reco.append(element)
+    return flat_reco
+
+
+def _average_operation_results(results, nsymm):
+    per_operation = {}
+    terms = []
+    for fallback_idx, item in enumerate(results):
+        if isinstance(item, tuple) and len(item) == 2 and isinstance(item[0], int):
+            idx, raw_op_data = item
+        else:
+            idx, raw_op_data = fallback_idx, item
+        flat_reco = _flatten_operation_result(raw_op_data)
+        per_operation[idx] = flat_reco
+        terms.extend({coords: [value]} for coords, value in flat_reco)
+
+    averaged = aveterms(terms, nsymm)
+    return [[coords, value] for coords, value in averaged.items()], per_operation
+
+
 
 def outwrite(cwd, seed, reco, num_wann, nrpts, NONCOLLINEAR_channel, chnl):
     if NONCOLLINEAR_channel:
@@ -228,6 +256,9 @@ use_win = '{params['use_win']}'
 # read and symmetrize *_tb.dat instead of *_hr.dat
 tb_mode = {params.get('tb_mode', 'False')}
 
+# also write the symmetrized Hamiltonian block in HR format in tb mode
+output_hr_from_tb = False
+
 # spin channel format: 'updnupdn' (False) or 'upup...dndn...' (True)
 chnl = True
 
@@ -256,3 +287,19 @@ symm_output = True
         template += "\nend kpoint_path\n"
         
     return template
+
+
+def _write_hr_from_tb(config, workdir, Hsymm, num_wann, nrpts):
+    if not (config.tb_mode and config.output_hr_from_tb):
+        return
+
+    print("Writing symmetrized Hamiltonian block in HR format...")
+    outwrite(
+        workdir,
+        config.seed,
+        reco=Hsymm,
+        num_wann=num_wann,
+        nrpts=nrpts,
+        NONCOLLINEAR_channel=config.NONCOLLINEAR_channel,
+        chnl=config.chnl,
+    )

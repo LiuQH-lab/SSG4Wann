@@ -10,6 +10,7 @@ from ..exceptions import ConfigParseError, WannierMatchError
 
 
 class tb:
+    _OUTPUT_VALUE_FORMAT = "{:26.16E}"
     _NUMBER_PATTERN = re.compile(
         r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[EeDd][+-]?\d+)?"
     )
@@ -286,7 +287,6 @@ class tb:
         r_reco,
         num_wann: int,
         NONCOLLINEAR_channel: bool,
-        precision: int = 16,
     ) -> None:
         if NONCOLLINEAR_channel:
             cls._write_one(
@@ -295,7 +295,6 @@ class tb:
                 H_reco,
                 r_reco,
                 num_wann,
-                precision,
             )
             return
 
@@ -306,7 +305,6 @@ class tb:
                 cls._split_channel_records(H_reco, num_wann, channel),
                 cls._split_channel_records(r_reco, num_wann, channel),
                 num_wann,
-                precision,
             )
 
     @staticmethod
@@ -316,7 +314,6 @@ class tb:
         H_reco,
         r_reco,
         num_wann: int,
-        precision: int,
     ) -> None:
         H_reco = sorted(H_reco, key=lambda rec: (*rec[0][:3], rec[0][4], rec[0][3]))
         r_reco = sorted(r_reco, key=lambda rec: (*rec[0][:3], rec[0][4], rec[0][3]))
@@ -335,8 +332,7 @@ class tb:
             if len(h_by_r[r_tuple]) != expected_entries or len(r_by_r[r_tuple]) != expected_entries:
                 raise WannierMatchError(f"Incomplete matrix block for R={r_tuple}.")
 
-        width = max(22, precision + 7)
-        value_format = f"{{:{width}.{precision}E}}"
+        value_format = tb._OUTPUT_VALUE_FORMAT
         lattice_rows = np.asarray(lattice).T
 
         with open(filepath, "w") as handle:

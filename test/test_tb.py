@@ -128,13 +128,45 @@ class TbParserTests(unittest.TestCase):
                 H_records,
                 r_records,
                 parsed["num_wann"],
-                precision=20,
             )
             roundtrip = tb.raw_read(str(Path(tempdir) / "roundtrip_tb.dat"))
             self.assertEqual(roundtrip["H"][(0, 0, 0)][(2, 2)], 4.0)
             np.testing.assert_allclose(
                 roundtrip["r"][(0, 0, 0)][(1, 2)],
                 np.array([0.7, 0.8, 0.9]),
+            )
+
+    def test_output_values_remain_space_separated_at_fixed_precision(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            output = Path(tempdir) / "wide_values_tb.dat"
+            h_value = complex(1.2345678901234567e123, -9.876543210987654e-123)
+            r_value = np.array(
+                [
+                    complex(-1.2345678901234567e123, -2.0),
+                    complex(3.0, -4.567890123456789e99),
+                    complex(-5.0, 6.0),
+                ]
+            )
+            tb._write_one(
+                str(output),
+                np.eye(3),
+                [[(0, 0, 0, 1, 1), h_value]],
+                [[(0, 0, 0, 1, 1), r_value]],
+                num_wann=1,
+            )
+
+            matrix_lines = [
+                line.split()
+                for line in output.read_text(encoding="utf-8").splitlines()
+                if line.split()[:2] == ["1", "1"]
+            ]
+            self.assertEqual([len(parts) for parts in matrix_lines], [4, 8])
+
+            parsed = tb.raw_read(str(output))
+            self.assertEqual(parsed["H"][(0, 0, 0)][(1, 1)], h_value)
+            np.testing.assert_allclose(
+                parsed["r"][(0, 0, 0)][(1, 1)],
+                r_value,
             )
 
 

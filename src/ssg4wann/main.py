@@ -11,35 +11,6 @@ from .core.wannob import proj_seq
 from .core.sogroup import coset_decomposition
 from .exceptions import ConfigParseError
 
-
-def _flatten_operation_result(raw_op_data):
-    flat_reco = []
-    for element in raw_op_data:
-        if isinstance(element, list) and (
-            len(element) != 2 or not isinstance(element[0], tuple)
-        ):
-            flat_reco.extend(element)
-        else:
-            flat_reco.append(element)
-    return flat_reco
-
-
-def _average_operation_results(results, nsymm):
-    per_operation = {}
-    terms = []
-    for fallback_idx, item in enumerate(results):
-        if isinstance(item, tuple) and len(item) == 2 and isinstance(item[0], int):
-            idx, raw_op_data = item
-        else:
-            idx, raw_op_data = fallback_idx, item
-        flat_reco = _flatten_operation_result(raw_op_data)
-        per_operation[idx] = flat_reco
-        terms.extend({coords: [value]} for coords, value in flat_reco)
-
-    averaged = aveterms(terms, nsymm)
-    return [[coords, value] for coords, value in averaged.items()], per_operation
-
-
 def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
 
     workdir = dirname(abspath(config_path))
@@ -214,7 +185,9 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
                         rsymm,
                         num_wann,
                         config.NONCOLLINEAR_channel,
-
+                    )
+                    _write_hr_from_tb(
+                        config, workdir, Hsymm, num_wann, nrptssymm
                     )
             mpi_print('Symmetrization finished!')
 
@@ -290,7 +263,6 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
                                 r_per_operation[idx],
                                 num_wann,
                                 config.NONCOLLINEAR_channel,
-                                config.tb_precision,
                             )
                     tb.outwrite(
                         workdir,
@@ -300,7 +272,9 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
                         rsymm,
                         num_wann,
                         config.NONCOLLINEAR_channel,
-                        config.tb_precision,
+                    )
+                    _write_hr_from_tb(
+                        config, workdir, Hsymm, num_wann, nrptssymm
                     )
             mpi_print('Symmetrization finished!')
 
@@ -361,5 +335,3 @@ def usegroup(soc, POSCAR_path, symm_output, workdir):
 
 
    
-
-

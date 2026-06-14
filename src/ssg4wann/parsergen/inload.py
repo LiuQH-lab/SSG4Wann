@@ -14,6 +14,7 @@ class Config:
     soc: bool | None = None
     winpath: str = ''
     tb_mode: bool = False
+    output_hr_from_tb: bool = False
     chnl: bool = True
     bands_trans: bool = False
     bands_num_points: int = 100
@@ -112,6 +113,7 @@ def infoload(config_path: str, rank: int) -> Config:
                     case 'seedname': config.seed = val
                     case 'use_win': config.winpath = val
                     case 'tb_mode': config.tb_mode = _parse_bool(val)
+                    case 'output_hr_from_tb': config.output_hr_from_tb = _parse_bool(val)
                     case 'use_hr_file': config.hr4trans = val
                     case 'bands_num_points': config.bands_num_points = int(val)
                     case 'soc': config.soc = _parse_bool(val)
