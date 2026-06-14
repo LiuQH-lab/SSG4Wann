@@ -189,7 +189,7 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
                     _write_hr_from_tb(
                         config, workdir, Hsymm, num_wann, nrptssymm
                     )
-            mpi_print('Symmetrization finished!')
+            mpi_print('Congratulations! Symmetrization finished!')
 
 
         elif config.hard_ave == True:
@@ -276,30 +276,65 @@ def avg_kernel(rank, comm, mpi_print, USE_MPI, config_path):
                     _write_hr_from_tb(
                         config, workdir, Hsymm, num_wann, nrptssymm
                     )
-            mpi_print('Symmetrization finished!')
+            mpi_print('Congratulations! Symmetrization finished!')
 
     elif config.bands_trans == True:  #bands transformation
-        hrob = None
+        band_parser = None
+        band_source = config.tb4trans if config.tb_mode else config.hr4trans
+        band_source_path = (
+            band_source
+            if os.path.isabs(band_source)
+            else os.path.join(workdir, band_source)
+        )
         if rank == 0:
-            hrob = hr(workdir, config.seed, NONCOLLINEAR_channel=config.NONCOLLINEAR_channel, hr4trans=config.hr4trans)
+            if config.tb_mode:
+                band_parser = tb(
+                    workdir,
+                    config.seed,
+                    NONCOLLINEAR_channel=config.NONCOLLINEAR_channel,
+                    tb4trans=band_source_path,
+                )
+            else:
+                band_parser = hr(
+                    workdir,
+                    config.seed,
+                    NONCOLLINEAR_channel=config.NONCOLLINEAR_channel,
+                    hr4trans=band_source_path,
+                )
         if USE_MPI:
-            hrob = comm.bcast(hrob, root = 0)
-        bds_trans(hrob, workdir, config.seed, config.hr4trans, config.bands_num_points, config.kpath_segments, permuK, permutation, comm, USE_MPI)
+            band_parser = comm.bcast(band_parser, root=0)
+        bds_trans(
+            band_parser,
+            workdir,
+            band_source,
+            config.bands_num_points,
+            config.kpath_segments,
+            permuK,
+            permutation,
+            comm,
+            USE_MPI,
+        )
 
-def bds_trans(hrob, workdir, seed, hr4trans, bands_num_points, kpath, permuK, permutation, comm, USE_MPI):
+def bds_trans(band_parser, workdir, band_source, bands_num_points, kpath, permuK, permutation, comm, USE_MPI):
     if USE_MPI:
         rank = comm.Get_rank()
     else:
         rank = 0
     mpi_print = partial(global_mpi_print, rank=rank)
-    mpi_print(f'transforing {hr4trans} to band structure data...')
-    key = hr4trans.split('.')[0]
-    bandspath = os.path.join(workdir, key + '_bands.dat')
-    k_points, x_axis, labels = hrob.Kpoints_gen(bands_num_points, kpath, permuK)
-    hr_entry, num_wann = hrob.hr_entry()
+    mpi_print(f'transforming {band_source} to band structure data...')
+    source_name = os.path.basename(band_source)
+    key, extension = os.path.splitext(source_name)
+    if extension.lower() != ".dat":
+        key = source_name
+    bandspath = os.path.join(workdir, key + '_band.dat')
+    k_points, x_axis, labels = hr.Kpoints_gen(bands_num_points, kpath, permuK)
+    if isinstance(band_parser, hr):
+        hr_entry, num_wann = band_parser.hr_entry()
+    else:
+        hr_entry, _, num_wann = band_parser.tb_entry()
 
     eig_loop = partial(
-        hrob.hr2bds, 
+        hr.hr2bds,
         num_wann=num_wann,
         hr_entry=hr_entry,
         permuK=permuK, 
@@ -312,7 +347,7 @@ def bds_trans(hrob, workdir, seed, hr4trans, bands_num_points, kpath, permuK, pe
     if rank == 0:
         eigenvalues = [item for sublist in resultseigen for item in sublist]
         eigenvalues = np.array(eigenvalues).reshape(len(k_points), num_wann)
-        bandwrite(bandspath, x_axis, eigenvalues, hr4trans, labels)
+        bandwrite(bandspath, x_axis, eigenvalues, band_source, labels)
         mpi_print("Band structure data generation finished!")
 
 def usegroup(soc, POSCAR_path, symm_output, workdir):

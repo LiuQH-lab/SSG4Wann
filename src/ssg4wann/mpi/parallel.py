@@ -23,7 +23,15 @@ def calc_op(idx_op, soc, permutation, orbSpin, orbitals, hr_entry, spin_directio
         for Rtu, block in hr_entry.items():
             for a, b in product(orbitals, orbitals):
                 Lat = np.array(Rtu).reshape(3, 1)
-                Latii = np.floor(operator.matrix @ (Lat + a.tau) + operator.translation) - np.floor(operator.matrix @ b.tau + operator.translation)
+                Latii = np.floor(
+                    operator.matrix @ (Lat + a.tau)
+                    + operator.translation
+                    + TOL_MATRIX_ZERO
+                ) - np.floor(
+                    operator.matrix @ b.tau
+                    + operator.translation
+                    + TOL_MATRIX_ZERO
+                )
                 LatNew = tuple(Latii.flat)
                 local_LatSet.add(LatNew)
     else:
@@ -275,7 +283,6 @@ def markjudge(soc, op_data, permutation, spin_direction):
 
         return operator, conj_factor
     
-
 
 
 

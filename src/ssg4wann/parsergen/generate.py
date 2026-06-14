@@ -126,16 +126,16 @@ def bandwrite(bandspath, x_axis, eigenvalues, hr4trans, labels):
     num_k = len(x_axis)
     with open(bandspath, 'w') as f:
         f.write(f"# Bands derived from {hr4trans}\n")
-        f.write(f"#      k-path len        Energy\n")
+        f.write(f"#      k-path len               Energy\n")
         for b_idx in range(num_bands):
             for k_idx in range(num_k):
                 x = x_axis[k_idx]
                 e = eigenvalues[k_idx, b_idx]
-                f.write(f"   {x:15.9f}   {e:16.6f}\n")
+                f.write(f"   {x:22.16f}   {e:22.16f}\n")
                 if x in dict(labels).keys() and x != 0 :
                     f.write("\n")  
                     if x != x_axis[-1]:
-                        f.write(f"   {x:15.9f}   {e:25.15f}\n")
+                        f.write(f"   {x:22.16f}   {e:22.16f}\n")
             f.write("\n")
 
 
@@ -267,6 +267,9 @@ bands_trans = False
 
 # the hr file transformed to the band structure
 use_hr_file = wannier90_symmed_hr.dat
+
+# the tb file transformed to the band structure when tb_mode is True
+use_tb_file = wannier90_symmed_tb.dat
 
 # number of k-points for band between each 2 high-symmetry k points
 bands_num_points = 100

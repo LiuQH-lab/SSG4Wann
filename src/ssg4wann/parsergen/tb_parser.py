@@ -20,9 +20,15 @@ class tb:
         cwd: str,
         seed: str,
         NONCOLLINEAR_channel: bool,
+        tb4trans: str | None = None,
     ):
         self.NONCOLLINEAR_channel = NONCOLLINEAR_channel
-        self.paths = self._resolve_paths(cwd, seed)
+        self.tb4trans = tb4trans
+        self.paths = (
+            {"nc": tb4trans}
+            if tb4trans is not None
+            else self._resolve_paths(cwd, seed)
+        )
         self.lattice = None
         self.num_wann = None
         self.nrpts = None
@@ -40,7 +46,11 @@ class tb:
         }
 
     def rawload(self) -> None:
-        channels = ["nc"] if self.NONCOLLINEAR_channel else ["up", "dn"]
+        channels = (
+            ["nc"]
+            if self.NONCOLLINEAR_channel or self.tb4trans is not None
+            else ["up", "dn"]
+        )
         reference = None
 
         for channel in channels:
@@ -198,7 +208,8 @@ class tb:
 
     def _entry(self, quantity: str) -> dict:
         result = {}
-        channels = ["nc"] if self.NONCOLLINEAR_channel else ["up", "dn"]
+        direct_matrix = self.NONCOLLINEAR_channel or self.tb4trans is not None
+        channels = ["nc"] if direct_matrix else ["up", "dn"]
 
         for channel in channels:
             for r_tuple, raw_block in self.raw_data_dict[channel][quantity].items():
@@ -207,7 +218,7 @@ class tb:
                     {"Rvec": np.array(r_tuple, dtype=int).reshape(3, 1)},
                 )
                 for indices, value in raw_block.items():
-                    if self.NONCOLLINEAR_channel:
+                    if direct_matrix:
                         block[indices] = value
                     else:
                         block.setdefault(indices, {})[channel] = value

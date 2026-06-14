@@ -1,4 +1,4 @@
-# input file for the SSG4Wann package, generated automatically at 2026-06-13 20:47:35
+# input file for the SSG4Wann package, generated automatically at 2026-06-14 13:46:32
 # '#', '!' or '//' will be regard as comments
 
 # SOC flag True for OSSG or False for subgroup MSG
@@ -13,8 +13,8 @@ use_win = 'wannier90.up.win'
 # read and symmetrize *_tb.dat instead of *_hr.dat
 tb_mode = True
 
-# decimal precision used for symmetrized tb output
-tb_precision = 16
+# also write the symmetrized Hamiltonian block in HR format in tb mode
+output_hr_from_tb = False
 
 # spin channel format: 'updnupdn' (False) or 'upup...dndn...' (True)
 chnl = True
@@ -24,6 +24,9 @@ bands_trans = False
 
 # the hr file transformed to the band structure
 use_hr_file = wannier90_symmed_hr.dat
+
+# the tb file transformed to the band structure when tb_mode is True
+use_tb_file = wannier90.dn_symmed_tb.dat
 
 # number of k-points for band between each 2 high-symmetry k points
 bands_num_points = 100

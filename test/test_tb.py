@@ -1,10 +1,15 @@
 import tempfile
 from pathlib import Path
+import re
 import unittest
 
 import numpy as np
 
+from ssg4wann.main import bds_trans
 from ssg4wann.mpi.parallel import calc_r_ent
+from ssg4wann.parsergen.generate import get_sg_template
+from ssg4wann.parsergen.hr_parser import hr
+from ssg4wann.parsergen.inload import infoload
 from ssg4wann.parsergen.tb_parser import tb
 
 
@@ -73,6 +78,152 @@ class TbParserTests(unittest.TestCase):
                 "dn": "/work/sample.dn_tb.dat",
             },
         )
+
+    def test_explicit_tb_file_can_feed_existing_band_calculation(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            source = Path(tempdir) / "custom_tb.dat"
+            write_tb_fixture(source)
+
+            parser = tb(
+                tempdir,
+                "ignored",
+                NONCOLLINEAR_channel=False,
+                tb4trans=str(source),
+            )
+            H_entry, _, num_wann = parser.tb_entry()
+            eigenvalues = hr.hr2bds(
+                np.zeros(3),
+                num_wann,
+                H_entry,
+                np.eye(3),
+                np.eye(3),
+            )
+
+            np.testing.assert_allclose(eigenvalues, [0.0, 5.0])
+
+    def test_tb_mode_and_band_trans_accept_use_tb_file(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            config_path = Path(tempdir) / "sg.in"
+            config_path.write_text(
+                """
+                tb_mode = True
+                bands_trans = True
+                use_tb_file = custom_tb.dat
+                NONCOLLINEAR_channel = True
+                begin kpoint_path
+                G 0 0 0 X 0.5 0 0
+                end kpoint_path
+                """,
+                encoding="utf-8",
+            )
+
+            config = infoload(str(config_path), rank=0)
+
+            self.assertTrue(config.tb_mode)
+            self.assertTrue(config.bands_trans)
+            self.assertEqual(config.tb4trans, "custom_tb.dat")
+
+    def test_generated_template_contains_default_tb_band_file(self):
+        template = get_sg_template(
+            {
+                "soc": "False",
+                "seedname": "wannier90",
+                "use_win": "wannier90.win",
+                "noncollinear": "True",
+            }
+        )
+
+        self.assertIn("use_tb_file = wannier90_symmed_tb.dat", template)
+
+    def test_explicit_tb_file_writes_band_data(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            source = Path(tempdir) / "custom_tb.dat"
+            write_tb_fixture(source)
+            parser = tb(
+                tempdir,
+                "ignored",
+                NONCOLLINEAR_channel=True,
+                tb4trans=str(source),
+            )
+
+            bds_trans(
+                parser,
+                tempdir,
+                source.name,
+                bands_num_points=2,
+                kpath=[
+                    {
+                        "label_start": "G",
+                        "start": np.zeros(3),
+                        "label_end": "X",
+                        "end": np.array([0.5, 0.0, 0.0]),
+                    }
+                ],
+                permuK=np.eye(3),
+                permutation=np.eye(3),
+                comm=None,
+                USE_MPI=False,
+            )
+
+            output = Path(tempdir) / "custom_tb_band.dat"
+            self.assertTrue(output.exists())
+            contents = output.read_text(encoding="utf-8")
+            self.assertIn("# Bands derived from custom_tb.dat", contents)
+            data_lines = [
+                line
+                for line in contents.splitlines()
+                if line.strip() and not line.startswith("#")
+            ]
+            number_pattern = re.compile(r"^-?\d+\.\d{16}$")
+            for line in data_lines:
+                k_value, energy = line.split()
+                self.assertRegex(k_value, number_pattern)
+                self.assertRegex(energy, number_pattern)
+            self.assertTrue(any(line.split()[1] == "5.0000000000000000" for line in data_lines))
+
+    def test_band_output_name_preserves_spin_and_symmetrization_suffixes(self):
+        cases = (
+            "wannier90.up_hr.dat",
+            "wannier90.dn_tb.dat",
+            "wannier90.up_symmed_hr.dat",
+            "wannier90.dn_symmed_tb.dat",
+            "wannier90_symmed_hr.dat",
+            "wannier90_symmed_tb.dat",
+        )
+
+        for source_name in cases:
+            with self.subTest(source_name=source_name):
+                with tempfile.TemporaryDirectory() as tempdir:
+                    source = Path(tempdir) / source_name
+                    write_tb_fixture(source)
+                    parser = tb(
+                        tempdir,
+                        "ignored",
+                        NONCOLLINEAR_channel=True,
+                        tb4trans=str(source),
+                    )
+
+                    bds_trans(
+                        parser,
+                        tempdir,
+                        source.name,
+                        bands_num_points=2,
+                        kpath=[
+                            {
+                                "label_start": "G",
+                                "start": np.zeros(3),
+                                "label_end": "X",
+                                "end": np.array([0.5, 0.0, 0.0]),
+                            }
+                        ],
+                        permuK=np.eye(3),
+                        permutation=np.eye(3),
+                        comm=None,
+                        USE_MPI=False,
+                    )
+
+                    expected = Path(tempdir) / f"{source.stem}_band.dat"
+                    self.assertTrue(expected.exists())
 
     def test_collinear_channels_merge_like_hr_entries(self):
         with tempfile.TemporaryDirectory() as tempdir:
