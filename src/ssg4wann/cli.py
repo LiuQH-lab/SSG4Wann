@@ -16,7 +16,8 @@ def detect_system_settings(workdir: Path) -> dict:
         "soc": "T",
         "seedname": "wannier90",
         "use_win": "wannier90.win",
-        "noncollinear": "False"
+        "noncollinear": "False",
+        "tb_mode": "False",
     }
     
     incar_path = workdir / "INCAR"
@@ -38,24 +39,48 @@ def detect_system_settings(workdir: Path) -> dict:
             raise ConfigParseError("Failed to detect noncollinear setting from INCAR. Please ensure LNONCOLLINEAR is set to .TRUE. or .FALSE.")
     else:
         raise FileNotFoundError(f"INCAR file not found in the working directory: {workdir}. Please make sure to place the INCAR file in the working directory or specify the correct path.")
-    collinear_hr = list(workdir.glob("*.up_hr.dat"))
+    collinear_tb = [
+        path
+        for path in workdir.glob("*.up_tb.dat")
+        if "_symmed" not in path.name.lower()
+    ]
+    noncol_tb = [
+        path
+        for path in workdir.glob("*_tb.dat")
+        if ".up_tb.dat" not in path.name
+        and ".dn_tb.dat" not in path.name
+        and "_symmed" not in path.name.lower()
+    ]
+    collinear_hr = [
+        path
+        for path in workdir.glob("*.up_hr.dat")
+        if "_symmed" not in path.name.lower()
+    ]
+    noncol_hr = [
+        path
+        for path in workdir.glob("*_hr.dat")
+        if ".up_hr.dat" not in path.name
+        and ".dn_hr.dat" not in path.name
+        and "_symmed" not in path.name.lower()
+    ]
     if collinear_hr:
-
         seed = collinear_hr[0].name.replace(".up_hr.dat", "")
-        if '_symmed' in seed.lower():
-            seed = seed.replace('_symmed', '')
         params["seedname"] = seed
         params["use_win"] = f"{seed}.up.win"
-
-    else:
-
-        noncol_hr = list(workdir.glob("*_hr.dat"))
-        if noncol_hr:
-            seed = noncol_hr[0].name.replace("_hr.dat", "")
-            if '_symmed' in seed.lower():
-                seed = seed.replace('_symmed', '')
-            params["seedname"] = seed
-            params["use_win"] = f"{seed}.win"
+    elif noncol_hr:
+        seed = noncol_hr[0].name.replace("_hr.dat", "")
+        params["seedname"] = seed
+        params["use_win"] = f"{seed}.win"
+    elif collinear_tb:
+        seed = collinear_tb[0].name.replace(".up_tb.dat", "")
+        params["seedname"] = seed
+        params["use_win"] = f"{seed}.up.win"
+        params["tb_mode"] = "True"
+    elif noncol_tb:
+        seed = noncol_tb[0].name.replace("_tb.dat", "")
+        params["seedname"] = seed
+        params["use_win"] = f"{seed}.win"
+        params["tb_mode"] = "True"
     wann_path = workdir / params["use_win"]
     if not wann_path.exists():
         raise FileNotFoundError(f"Failed to detect the Wannier90 input file. Expected to find '{params['use_win']}' in the working directory: {workdir}. Please ensure the correct Wannier90 input file is present or specify the correct seedname in the config.")

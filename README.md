@@ -33,6 +33,7 @@ A MPI-enabled tool for **symmetrizing Wannier tight-binding Hamiltonians** (`*_h
       - [bands\_trans tag](#bands_trans-tag)
       - [bands\_num\_points tag](#bands_num_points-tag)
       - [use\_hr\_file tag](#use_hr_file-tag)
+      - [use\_tb\_file tag](#use_tb_file-tag)
       - [begin kpoint\_path ... end kpoint\_path block](#begin-kpoint_path--end-kpoint_path-block)
       - [each\_symm tag](#each_symm-tag)
       - [hard\_ave tag](#hard_ave-tag)
@@ -216,10 +217,13 @@ Example skeleton:
 SeedName = 'wannier90'
 soc = False
 use_win = wannier90.win
+tb_mode = False
+output_hr_from_tb = False
 chnl = True
 bands_trans = False
 bands_num_points = 100
 use_hr_file = 'wannier90_symmed_hr.dat'
+use_tb_file = 'wannier90_symmed_tb.dat'
 NONCOLLINEAR_channel = true
 
 ```
@@ -274,6 +278,31 @@ When `True`, the program will lower the symmetry to the corresponding subgroup o
 
 ### Optional keys
 
+#### tb_mode tag
+```ini
+Tag name:   tb_mode
+Type:       Boolean (True/False)
+Description: read Wannier90 `*_tb.dat` instead of `*_hr.dat`. The Hamiltonian
+block uses the existing HR symmetrization, while the Cartesian position-matrix
+block is symmetrized as a vector operator. The output is `*_symmed_tb.dat`.
+```
+
+#### output_hr_from_tb tag
+```ini
+Tag name:   output_hr_from_tb
+Type:       Boolean (True/False)
+Default:    False
+Description: when `tb_mode = True`, also write the symmetrized Hamiltonian
+block in the standard Wannier90 HR format. The program reuses the Hamiltonian
+already produced during TB symmetrization; it does not perform a second
+symmetrization.
+
+For a non-collinear calculation, the additional output is
+`<SeedName>_symmed_hr.dat`. For a collinear calculation, the additional outputs
+are `<SeedName>.up_symmed_hr.dat` and `<SeedName>.dn_symmed_hr.dat`.
+This tag has no effect when `tb_mode = False`.
+```
+
 #### chnl tag
 ```ini
 Tag name:   chnl
@@ -287,6 +316,10 @@ When `False`, the basis is ordered as [up1, dn1, up2, dn2, ..., upN, dnN]. It is
 Tag name:   bands_trans
 Type:       Boolean (True/False)
 Description: whether to perform band structure transformation. When `True`, the program will read the specified HR file (see `use_hr_file` key) and calculate the band structure data. It is set to `False` by default.     
+When `tb_mode = True` at the same time, the program instead reads the
+Hamiltonian block from the TB file specified by `use_tb_file` and reuses the
+same band calculation workflow. The position-matrix block in the TB file is
+not used for the band calculation.
 ```
 
 #### bands_num_points tag
@@ -302,6 +335,17 @@ Description: number of k-points between each pair of k-points for band structure
 Tag name:   use_hr_file
 Type:       String (file path)
 Description: path to the HR file for band structure transformation. This key is necessary when `bands_trans` is set to `True`.
+```
+
+#### use_tb_file tag
+```ini
+Tag name:   use_tb_file
+Type:       String (file path)
+Default:    wannier90_symmed_tb.dat
+Description: path to the TB file for band structure transformation. This key
+is used when both `bands_trans` and `tb_mode` are set to `True`. The
+Hamiltonian block is read from this file and transformed with the same logic
+used for an HR file.
 ```
 
 #### begin kpoint_path ... end kpoint_path block
@@ -375,14 +419,17 @@ Description: whether to perform the direct product structure to speed up the sym
 When `True`, the program will only perform the NONTRIVIAL SPIN GROUP operation when symmetrization without SOC, and detect the spin-only group to ensure whether the Hamiltonian is real.
 When `False`, the program will perform the whole oriented spin space group operation when calculating without SOC, which is more time-consuming.
 This tag is mainly for testing purposes and is set to `True` by default. 
+It is intentionally not applied in `tb_mode`, because the position-matrix
+block must currently be averaged over the full oriented spin space group.
 ```
 
 ## Output Files
 
 Typical output includes symmetrized HR files or band structure data, depending on the configuration:
 
-- `*_symmed_hr.dat`
-- `*_bands.dat`
+- `*_symmed_hr.dat` (also produced from TB mode when `output_hr_from_tb = True`)
+- `*_symmed_tb.dat`
+- `*_band.dat`
 
 Output naming is controlled by seed/config and channel logic in the code.
 
@@ -414,15 +461,6 @@ The core symmetrization pipeline is conceptually:
 ## License
 This project is licensed under the Apache License, Version 2.0.
 See the LICENSE file for details.
-
-
-
-
-
-
-
-
-
 
 
 

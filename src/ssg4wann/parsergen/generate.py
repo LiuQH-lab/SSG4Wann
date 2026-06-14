@@ -16,6 +16,34 @@ def aveterms(entries_op, nsymm):
     avg_dict = {k: total / nsymm for k, (total, count) in acc.items()}
     return avg_dict
 
+def _flatten_operation_result(raw_op_data):
+    flat_reco = []
+    for element in raw_op_data:
+        if isinstance(element, list) and (
+            len(element) != 2 or not isinstance(element[0], tuple)
+        ):
+            flat_reco.extend(element)
+        else:
+            flat_reco.append(element)
+    return flat_reco
+
+
+def _average_operation_results(results, nsymm):
+    per_operation = {}
+    terms = []
+    for fallback_idx, item in enumerate(results):
+        if isinstance(item, tuple) and len(item) == 2 and isinstance(item[0], int):
+            idx, raw_op_data = item
+        else:
+            idx, raw_op_data = fallback_idx, item
+        flat_reco = _flatten_operation_result(raw_op_data)
+        per_operation[idx] = flat_reco
+        terms.extend({coords: [value]} for coords, value in flat_reco)
+
+    averaged = aveterms(terms, nsymm)
+    return [[coords, value] for coords, value in averaged.items()], per_operation
+
+
 
 def outwrite(cwd, seed, reco, num_wann, nrpts, NONCOLLINEAR_channel, chnl):
     if NONCOLLINEAR_channel:
@@ -98,16 +126,16 @@ def bandwrite(bandspath, x_axis, eigenvalues, hr4trans, labels):
     num_k = len(x_axis)
     with open(bandspath, 'w') as f:
         f.write(f"# Bands derived from {hr4trans}\n")
-        f.write(f"#      k-path len        Energy\n")
+        f.write(f"#      k-path len               Energy\n")
         for b_idx in range(num_bands):
             for k_idx in range(num_k):
                 x = x_axis[k_idx]
                 e = eigenvalues[k_idx, b_idx]
-                f.write(f"   {x:15.9f}   {e:16.6f}\n")
+                f.write(f"   {x:22.16f}   {e:22.16f}\n")
                 if x in dict(labels).keys() and x != 0 :
                     f.write("\n")  
                     if x != x_axis[-1]:
-                        f.write(f"   {x:15.9f}   {e:25.15f}\n")
+                        f.write(f"   {x:22.16f}   {e:22.16f}\n")
             f.write("\n")
 
 
@@ -225,6 +253,12 @@ SeedName='{params['seedname']}'
 # .win file
 use_win = '{params['use_win']}'
 
+# read and symmetrize *_tb.dat instead of *_hr.dat
+tb_mode = {params.get('tb_mode', 'False')}
+
+# also write the symmetrized Hamiltonian block in HR format in tb mode
+output_hr_from_tb = False
+
 # spin channel format: 'updnupdn' (False) or 'upup...dndn...' (True)
 chnl = True
 
@@ -233,6 +267,9 @@ bands_trans = False
 
 # the hr file transformed to the band structure
 use_hr_file = wannier90_symmed_hr.dat
+
+# the tb file transformed to the band structure when tb_mode is True
+use_tb_file = wannier90_symmed_tb.dat
 
 # number of k-points for band between each 2 high-symmetry k points
 bands_num_points = 100
@@ -254,3 +291,18 @@ symm_output = True
         
     return template
 
+
+def _write_hr_from_tb(config, workdir, Hsymm, num_wann, nrpts):
+    if not (config.tb_mode and config.output_hr_from_tb):
+        return
+
+    print("Writing symmetrized Hamiltonian block in HR format...")
+    outwrite(
+        workdir,
+        config.seed,
+        reco=Hsymm,
+        num_wann=num_wann,
+        nrpts=nrpts,
+        NONCOLLINEAR_channel=config.NONCOLLINEAR_channel,
+        chnl=config.chnl,
+    )

@@ -13,11 +13,14 @@ class Config:
     seed: str = 'wannier90'
     soc: bool | None = None
     winpath: str = ''
+    tb_mode: bool = False
+    output_hr_from_tb: bool = False
     chnl: bool = True
     bands_trans: bool = False
     bands_num_points: int = 100
     kpath_segments: list[dict[str, Any]] = field(default_factory=list)
     hr4trans: str = ''
+    tb4trans: str = ''
     NONCOLLINEAR_channel: bool | None = None
     each_symm: bool = False
     hard_ave: bool = False
@@ -30,17 +33,11 @@ class Config:
     def validate(self, mpi_print: Callable) -> None:
         if self.bands_trans and not self.kpath_segments:
             raise ConfigParseError("Error: 'bands_trans' is True, but no 'kpoint_path' block found in sg.in")
-            
-
-            
-
-            
         if self.NONCOLLINEAR_channel is None:
             raise ConfigParseError("Error: NONCOLLINEAR_channel variable is not set.")
 
         if self.NONCOLLINEAR_channel == False and self.chnl == False:
             raise ConfigParseError("Error: Both NONCOLLINEAR_channel and chnl cannot be False. If you are doing collinear calculation, set chnl = True and NONCOLLINEAR_channel = False.")
-
 
         if not self.bands_trans:
             if self.spin_direction is None and self.NONCOLLINEAR_channel:
@@ -54,7 +51,9 @@ class Config:
             if not self.NONCOLLINEAR_channel and self.spin_direction is None:
                 raise ConfigParseError("Error: 'NONCOLLINEAR_channel' is False but 'spin_direction' is not set!!!") 
         else:
-            if not self.hr4trans:
+            if self.tb_mode and not self.tb4trans:
+                raise ConfigParseError("Error: 'bands_trans' and 'tb_mode' are True but 'use_tb_file' is not set.")
+            if not self.tb_mode and not self.hr4trans:
                 raise ConfigParseError("Error: 'bands_trans' is True but 'use_hr_file' is not set.")
 
         
@@ -110,7 +109,10 @@ def infoload(config_path: str, rank: int) -> Config:
                 match key.lower():
                     case 'seedname': config.seed = val
                     case 'use_win': config.winpath = val
+                    case 'tb_mode': config.tb_mode = _parse_bool(val)
+                    case 'output_hr_from_tb': config.output_hr_from_tb = _parse_bool(val)
                     case 'use_hr_file': config.hr4trans = val
+                    case 'use_tb_file': config.tb4trans = val
                     case 'bands_num_points': config.bands_num_points = int(val)
                     case 'soc': config.soc = _parse_bool(val)
                     case 'chnl': config.chnl = _parse_bool(val)

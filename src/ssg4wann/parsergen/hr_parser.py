@@ -116,7 +116,8 @@ class hr:
         return H_dict, self.num_wann
     
    
-    def Kpoints_gen(self, bands_num_points, kpath, permuK):
+    @staticmethod
+    def Kpoints_gen(bands_num_points, kpath, permuK):
 
         current_dist = 0.0
         tot = [] 
@@ -279,4 +280,3 @@ class hr:
 
 
             
-

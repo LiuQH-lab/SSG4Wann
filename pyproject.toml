@@ -1,6 +1,6 @@
 [project]
 name = "ssg4wann"
-version = "0.99.9.2"
+version = "0.99.9.3"
 description = "A parallel (MPI-enabled) tool for symmetrizing Wannier tight-binding Hamiltonians (`_hr.dat`) generated from Wannier90, with oriented spin space group."
 license = "Apache-2.0"
 license-files = ["LICENSE"]
