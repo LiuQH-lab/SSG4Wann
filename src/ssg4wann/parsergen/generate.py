@@ -244,7 +244,7 @@ def get_sg_template(params: dict) -> str:
     template = f"""# input file for the SSG4Wann package, generated automatically at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 # '#', '!' or '//' will be regard as comments
 
-# SOC flag True for OSSG or False for subgroup MSG
+# SOC flag False for OSSG or True for subgroup MSG
 soc = {params['soc']}
 
 # seed name of the Hamiltonian file

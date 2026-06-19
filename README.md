@@ -1,6 +1,8 @@
 # SSG4Wann
 
-A MPI-enabled tool for **symmetrizing Wannier tight-binding Hamiltonians** (`*_hr.dat`) generated from Wannier90, using the Oriented Spin Space Group (OSSG) symmetry of the magnetic system and supporting both strong and weak spin-orbit coupling limits.
+A MPI-enabled tool for **symmetrizing Wannier tight-binding Model** (`*_hr.dat`/`*_tb.dat`) generated from Wannier90, using the Oriented Spin Space Group (OSSG) symmetry of the magnetic system and supporting both strong and weak spin-orbit coupling limits.
+
+For more details, please refer to the [documentation](https://ssg4wann.readthedocs.io/en/latest/).
 
 ---
 
@@ -29,6 +31,8 @@ A MPI-enabled tool for **symmetrizing Wannier tight-binding Hamiltonians** (`*_h
       - [spin\_direction tag](#spin_direction-tag)
       - [soc tag](#soc-tag)
     - [Optional keys](#optional-keys)
+      - [tb\_mode tag](#tb_mode-tag)
+      - [output\_hr\_from\_tb tag](#output_hr_from_tb-tag)
       - [chnl tag](#chnl-tag)
       - [bands\_trans tag](#bands_trans-tag)
       - [bands\_num\_points tag](#bands_num_points-tag)
@@ -127,7 +131,8 @@ sw.quick_run()
 ```
 also you can set the working directory and the config file path in the `quick_run` function:
 
-```pythonimport ssg4wann as sw
+```python
+import ssg4wann as sw
 sw.quick_run(workdir="path/to/your/workdir", config_name="path/to/your/sg.in")
 ```
 #### b) command line example
@@ -382,8 +387,8 @@ This tag is mainly for debugging and testing purposes and is set to `False` by d
 #### symm_output tag
 ```ini
 Tag name:   symm_output
-Type:       String (file path)
-Description: whether to output the group information of the given structure. 
+Type:       Boolean (True/False)
+Description: whether to output the group information
 
 The tag is set to be `True` by default.
 ```
