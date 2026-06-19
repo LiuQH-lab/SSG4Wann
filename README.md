@@ -1,6 +1,8 @@
 # SSG4Wann
 
-A MPI-enabled tool for **symmetrizing Wannier tight-binding Hamiltonians** (`*_hr.dat`) generated from Wannier90, using the Oriented Spin Space Group (OSSG) symmetry of the magnetic system and supporting both strong and weak spin-orbit coupling limits.
+A MPI-enabled tool for **symmetrizing Wannier tight-binding Model** (`*_hr.dat`/`*_tb.dat`) generated from Wannier90, using the Oriented Spin Space Group (OSSG) symmetry of the magnetic system and supporting both strong and weak spin-orbit coupling limits.
+
+For more details, please refer to the [documentation](https://ssg4wann.readthedocs.io/en/latest/).
 
 ---
 

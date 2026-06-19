@@ -1,6 +1,6 @@
 [project]
 name = "ssg4wann"
-version = "1.0.0"
+version = "1.0.1"
 description = "A parallel (MPI-enabled) tool for symmetrizing Wannier tight-binding Hamiltonians (`_hr.dat`) generated from Wannier90, with oriented spin space group."
 license = "Apache-2.0"
 license-files = ["LICENSE"]
@@ -31,6 +31,7 @@ mpi = ["mpi4py>=3.1.0"]
 [project.urls]
 Homepage = "https://github.com/LiuQH-lab/SSG4Wann"
 Repository = "https://github.com/LiuQH-lab/SSG4Wann"
+Documentation = "https://ssg4wann.readthedocs.io/en/latest/"
 Issues = "https://github.com/LiuQH-lab/SSG4Wann/issues"
 
 [tool.setuptools.dynamic]
