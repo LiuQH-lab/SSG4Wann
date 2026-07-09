@@ -332,11 +332,11 @@ def bds_trans(band_parser, workdir, band_source, bands_num_points, kpath, permuK
         hr_entry, num_wann = band_parser.hr_entry()
     else:
         hr_entry, _, num_wann = band_parser.tb_entry()
-
+    matrix_hr = hr.convert(hr_entry, num_wann)
     eig_loop = partial(
-        hr.hr2bds,
+        hr.matrix_hr2bds,
         num_wann=num_wann,
-        hr_entry=hr_entry,
+        matrix_hr=matrix_hr,
         permuK=permuK, 
         permutation=permutation
     )
