@@ -190,6 +190,11 @@ class hr:
         eigenvalues = np.linalg.eigvalsh(Hk)
         return eigenvalues
 
+    @staticmethod
+    def matrix_hr2bds(kpoint, num_wann, matrix_hr, permuK, permutation):
+        Hk = hr.Hk_gen(matrix_hr, num_wann, kpoint, permuK, permutation)
+        eigenvalues = np.linalg.eigvalsh(Hk)
+        return eigenvalues
 
     @staticmethod
     def hrdiff(hr_identity, hr_op, index, num_wann):
