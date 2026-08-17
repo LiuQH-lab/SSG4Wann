@@ -106,6 +106,7 @@ class TbParserTests(unittest.TestCase):
             config_path = Path(tempdir) / "sg.in"
             config_path.write_text(
                 """
+                soc = False
                 tb_mode = True
                 bands_trans = True
                 use_tb_file = custom_tb.dat
