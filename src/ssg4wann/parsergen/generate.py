@@ -83,12 +83,8 @@ def outwrite(cwd, seed, reco, num_wann, nrpts, NONCOLLINEAR_channel, chnl):
                     else:
                         raise WannierMatchError(f"Error: Inconsistent channel format. Found i={i}, j={j} with num_wann={num_wann}. Please check the chnl setting and the Hamiltonian file.")
                 case False:      # updnupdn format
-                    if i % 2 == 1 and j % 2 == 1:
-                        reco_up.append(((R1, R2, R3, i, j, H)))
-                    elif i % 2 == 0 and j % 2 == 0:
-                        reco_dn.append(((R1, R2, R3, i-1, j-1), H))
-                    else:
-                        raise WannierMatchError(f"Error: Inconsistent channel format. Found i={i}, j={j} with chnl={chnl}. Please check the chnl setting and the Hamiltonian file.")
+                    raise WannierMatchError("Error: The 'updnupdn' channel format is illegal for noncollinear calculations!!!")
+                
         reco_up.sort(key=lambda rec: (rec[0][0], rec[0][1], rec[0][2],
                                   rec[0][4], rec[0][3]))
         reco_dn.sort(key=lambda rec: (rec[0][0], rec[0][1], rec[0][2],
