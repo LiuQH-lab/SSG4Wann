@@ -1,1 +1,4 @@
-__version__ = "1.0.1"
+from importlib.metadata import version as distribution_version
+
+
+__version__ = distribution_version("ssg4wann")
