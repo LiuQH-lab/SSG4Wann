@@ -31,6 +31,8 @@ class Config:
     spinonly_speedup: bool = True
 
     def validate(self, mpi_print: Callable) -> None:
+        if self.soc is None:
+            raise ConfigParseError("Error: soc variable is not set.")
         if self.bands_trans and not self.kpath_segments:
             raise ConfigParseError("Error: 'bands_trans' is True, but no 'kpoint_path' block found in sg.in")
         if self.NONCOLLINEAR_channel is None:
@@ -57,8 +59,16 @@ class Config:
                 raise ConfigParseError("Error: 'bands_trans' is True but 'use_hr_file' is not set.")
 
         
-def _parse_bool(val: str) -> bool:
-    return val.upper() in ('T', 'TRUE', '.TRUE.', 'true')
+def _parse_bool(val: str, key: str, line_number: int) -> bool:
+    normalized = val.upper()
+    if normalized in ('T', 'TRUE', '.TRUE.'):
+        return True
+    if normalized in ('F', 'FALSE', '.FALSE.'):
+        return False
+    raise ConfigParseError(
+        f"Error: Invalid boolean value for '{key}' at line {line_number}: "
+        f"'{val}'. Expected True/False, T/F, or .TRUE./.FALSE."
+    )
 
 
 def infoload(config_path: str, rank: int) -> Config:
@@ -70,7 +80,7 @@ def infoload(config_path: str, rank: int) -> Config:
 
     try:
         with open(config_path, 'r') as f:
-            for line in f:
+            for line_number, line in enumerate(f, start=1):
                 line = line.strip()
                 if not line or line.startswith(('#', '!', '//')):
                     continue
@@ -109,18 +119,18 @@ def infoload(config_path: str, rank: int) -> Config:
                 match key.lower():
                     case 'seedname': config.seed = val
                     case 'use_win': config.winpath = val
-                    case 'tb_mode': config.tb_mode = _parse_bool(val)
-                    case 'output_hr_from_tb': config.output_hr_from_tb = _parse_bool(val)
+                    case 'tb_mode': config.tb_mode = _parse_bool(val, key, line_number)
+                    case 'output_hr_from_tb': config.output_hr_from_tb = _parse_bool(val, key, line_number)
                     case 'use_hr_file': config.hr4trans = val
                     case 'use_tb_file': config.tb4trans = val
                     case 'bands_num_points': config.bands_num_points = int(val)
-                    case 'soc': config.soc = _parse_bool(val)
-                    case 'chnl': config.chnl = _parse_bool(val)
-                    case 'bands_trans': config.bands_trans = _parse_bool(val)
-                    case 'noncollinear_channel': config.NONCOLLINEAR_channel = _parse_bool(val)
-                    case 'each_symm': config.each_symm = _parse_bool(val)
-                    case 'hard_ave': config.hard_ave = _parse_bool(val)
-                    case 'symm_output': config.symm_output = _parse_bool(val)
+                    case 'soc': config.soc = _parse_bool(val, key, line_number)
+                    case 'chnl': config.chnl = _parse_bool(val, key, line_number)
+                    case 'bands_trans': config.bands_trans = _parse_bool(val, key, line_number)
+                    case 'noncollinear_channel': config.NONCOLLINEAR_channel = _parse_bool(val, key, line_number)
+                    case 'each_symm': config.each_symm = _parse_bool(val, key, line_number)
+                    case 'hard_ave': config.hard_ave = _parse_bool(val, key, line_number)
+                    case 'symm_output': config.symm_output = _parse_bool(val, key, line_number)
                     case 'spin_direction':
                         parts = val.split()
                         if len(parts) >= 3:
@@ -131,11 +141,11 @@ def infoload(config_path: str, rank: int) -> Config:
                         else:
                             raise ConfigParseError(f"Warning: spin_direction needs 3 components in line: {line}")
                     case 'extend_latvec':
-                        config.extend_LatVec = _parse_bool(val)
+                        config.extend_LatVec = _parse_bool(val, key, line_number)
                     case 'forced_hermitianize':
-                        config.forced_hermitianize = _parse_bool(val)
+                        config.forced_hermitianize = _parse_bool(val, key, line_number)
                     case 'spinonly_speedup':
-                        config.spinonly_speedup = _parse_bool(val)
+                        config.spinonly_speedup = _parse_bool(val, key, line_number)
                         
     except FileNotFoundError:
         raise ConfigParseError(f"Error: Input file {config_path} not found.")

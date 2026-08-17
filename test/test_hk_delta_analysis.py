@@ -186,6 +186,7 @@ class HkDeltaAnalysisTests(unittest.TestCase):
             write_unit_lattice_win(win)
             config.write_text(
                 """
+                soc = False
                 use_win = wannier90.win
                 bands_num_points = 3
                 NONCOLLINEAR_channel = True
