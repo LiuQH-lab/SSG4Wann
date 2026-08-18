@@ -290,6 +290,188 @@ cell shift, Wannier centers, and real-space Hermiticity.
 - Run serial tests first. Add a multi-process smoke test when an MPI
   installation is available and the change affects parallel behavior.
 
+## Git Branch and Release Workflow
+
+The repository uses a long-lived development branch and a stable release
+branch:
+
+- `dev` is the integration branch for normal development.
+- `main` contains reviewed, release-ready history. Do not commit directly to
+  `main`.
+- Changes move from `dev` to `main` through a GitHub pull request using
+  **Rebase and merge**.
+- Release tags are created only from the rebased commit on `main`.
+
+Because GitHub's rebase merge creates new commit hashes on `main`, `dev` must
+be realigned with `main` after every merged PR. Leaving the pre-rebase commits
+on `dev` will recreate the divergent history that this workflow is intended to
+avoid.
+
+### Normal Development on `dev`
+
+Start new work from an up-to-date and clean `dev` branch:
+
+```bash
+git switch dev
+git pull --ff-only origin dev
+git status --short
+```
+
+Make focused commits and push them to `dev`:
+
+```bash
+git add <changed-files>
+git commit -m "fix: describe the change"
+git push origin dev
+```
+
+Optional short-lived feature branches may target `dev`, but the release PR is
+still made from `dev` to `main`. Do not mix unrelated work into a release PR.
+If temporary/WIP commits should not remain in the public history, clean them
+locally before opening the PR; the GitHub PR itself still uses **Rebase and
+merge**, not **Squash and merge** or a merge commit.
+
+If `main` advances independently while `dev` contains unmerged work, first
+rebase the clean `dev` branch onto the latest `main`, validate it, and update
+the remote with lease protection:
+
+```bash
+git fetch origin
+git switch dev
+git rebase origin/main
+git push --force-with-lease origin dev
+```
+
+Do not rebase a dirty working tree, and do not use `--force` in place of
+`--force-with-lease`.
+
+### Preparing a Release
+
+`pyproject.toml` is the single manually edited source of the package version.
+`src/ssg4wann/version.py` reads installed distribution metadata, while
+`uv.lock` and the editable `.venv` metadata are synchronized by `uv sync`.
+Changing `pyproject.toml` alone is therefore not the complete release step.
+
+Only bump the version when preparing a real release; ordinary development
+commits and non-release synchronization do not require a version bump. Make
+the version bump the final release-preparation commit on `dev`:
+
+```bash
+# Edit project.version in pyproject.toml first.
+uv sync
+.venv/bin/ssg4wann --version
+git status --short
+git add pyproject.toml uv.lock
+git commit -m "chore(release): bump version to X.Y.Z"
+git push origin dev
+```
+
+Confirm that the CLI prints `X.Y.Z` and review the lock-file change before
+committing it. Do not manually duplicate the version in another Python file.
+The corresponding Git tag is still created separately as `vX.Y.Z`.
+
+Before opening or merging the release PR, run the checks appropriate to the
+changes, including the complete serial test suite:
+
+```bash
+.venv/bin/python -m unittest discover -s test -p 'test_*.py' -v
+.venv/bin/ssg4wann --version
+.venv/bin/python scripts/check_release_version.py --tag vX.Y.Z
+git diff origin/main...dev --check
+```
+
+Do not proceed to tagging when a required test fails. The tag-triggered
+publish workflow validates the tag, version, and built artifacts, but it does
+not replace the complete scientific test suite.
+
+### Pull Request and Rebase Merge
+
+Push `dev`, then create a GitHub pull request with:
+
+```text
+base: main
+compare: dev
+```
+
+Review the complete diff and required checks, then select **Rebase and merge**
+from the merge-button menu. If that choice is unavailable, enable **Allow
+rebase merging** under the repository's pull-request settings. Do not tag the
+pre-rebase commit on `dev`, because its hash is not the commit that lands on
+`main`.
+
+### Tagging and Publishing from `main`
+
+After the PR is merged, update local `main` with a fast-forward pull and repeat
+the release-version check against the commit that will actually be tagged:
+
+```bash
+git fetch origin
+git switch main
+git pull --ff-only origin main
+.venv/bin/python scripts/check_release_version.py --tag vX.Y.Z
+git tag -a vX.Y.Z -m "vX.Y.Z"
+git push origin vX.Y.Z
+```
+
+The annotated tag must point to a commit on `main`. Pushing a `v*` tag triggers
+the PyPI publish workflow, so do not create or push a release tag until the
+release is intentionally approved and all required checks have passed. Agents
+must not push tags or publish a release without explicit user authorization.
+
+### Realigning `dev` After the Rebase Merge
+
+After the PR is merged and `origin/main` has been fetched, make `dev` point to
+the new rebased `main` commit:
+
+```bash
+git switch dev
+git status --short
+git reset --hard origin/main
+git push --force-with-lease origin dev
+```
+
+Before the reset, require all of the following:
+
+- the pull request has been merged successfully;
+- `origin/main` contains the expected commits;
+- the working tree is clean;
+- all wanted `dev` work has been pushed or otherwise backed up.
+
+`git reset --hard` discards uncommitted changes. Coding agents must follow the
+repository's destructive-action rules and obtain explicit authorization before
+performing the reset or force-updating the remote branch. Once complete,
+`main`, `dev`, `origin/main`, and `origin/dev` should resolve to the same commit
+until new development begins.
+
+### Backup and Temporary Integration Branches
+
+Backup branches are safety snapshots for exceptional history rewrites, not
+part of the normal release cycle. Do not create a backup for every release,
+and do not continue development on a backup branch.
+
+The `backup/dev-pre-v1.0.2` branch preserves the pre-cleanup `dev` history. It
+may be used to inspect old commits, compare an old tree, restore an individual
+file, or cherry-pick a specifically identified missing change:
+
+```bash
+git log --oneline backup/dev-pre-v1.0.2
+git diff backup/dev-pre-v1.0.2..dev
+git restore --source=backup/dev-pre-v1.0.2 -- <path>
+git cherry-pick <verified-missing-commit>
+```
+
+Never merge or cherry-pick the backup branch wholesale: much of that history
+already exists on `main` under different commit hashes. Keep the backup frozen
+until the cleaned history and subsequent releases are trusted, then delete it
+only after explicit review.
+
+`integration/v1.0.2` was a one-time migration branch used to move the real new
+changes onto the clean `main` history. It is not required for future releases.
+Once `git range-diff` or an equivalent review confirms that its commits landed
+on `main`, both its local and remote references may be deleted. Normal future
+releases use the direct `dev` to `main` pull-request workflow above and do not
+need a release or integration branch.
+
 ## Development and Validation
 
 Use Python 3.12 or newer. Prefer the repository environment and lock file; do
