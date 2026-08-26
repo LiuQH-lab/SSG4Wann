@@ -540,7 +540,7 @@ For TB position-matrix changes, verify:
 - Cartesian rotation behavior;
 - cancellation of symmetry translation and bra cell shift;
 - physically consistent home-cell diagonal Wannier centers;
-- Hermiticity of every Cartesian component.
+- Hermiticity of every Cartesian component. (It is not necessarily, because the Hamiltonian output by Wannier90 may be non-Hermitian by a small numerical amount.)
 
 Report the exact tests run, their results, and any checks not run. Do not hide
 failures or relabel them as passing. Benchmark tolerances must come from tests,
