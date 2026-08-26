@@ -49,7 +49,7 @@ In SSG4Wann, the `soc` setting selects the symmetry operation set:
 - `soc = False` uses the full oriented spin space group (OSSG).
 - `soc = True` uses the corresponding magnetic space group (MSG) subgroup.
 
-## Fe: collinear HR symmetrization
+## Fe: collinear HR symmetrization { #Fe }
 
 This is the smallest collinear example. It reads separate spin-up and
 spin-down Wannier90 Hamiltonians:
@@ -200,19 +200,5 @@ mpirun -np 4 ssg4wann -c sg.in
 
 ## Checking a result
 
-A successful run should produce the expected `*_symmed_hr.dat` or
-`*_symmed_tb.dat` files without basis-mapping or spin-rotation errors.
-Successful completion alone does not guarantee a physically correct result.
-Before using the model, check at least the following:
-
-1. Compare the original and symmetrized band structures.
-2. Check that the chosen `spin_direction` matches the original calculation.
-3. Check that the projection order in the `.win` file matches the basis order
-   of the HR or TB file.
-4. Inspect warnings concerning Wannier centers, orbital matching, or symmetry
-   operations.
-5. Confirm that the symmetrized model has the intended OSSG or MSG symmetry.
-
-Large changes in dispersion, unexpected flat bands, missing bands, or extra
-band crossings commonly indicate an inconsistent basis order, an incorrect
-spin direction, or insufficient Wannierization quality.
+See [Troubleshooting and Compatibility](troubleshooting.md) for the result
+checklist, common symmetrization errors, and known VASP compatibility issues.

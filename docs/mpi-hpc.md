@@ -22,10 +22,12 @@ python -m pip install "ssg4wann[mpi]"
 Check that the MPI launcher and Python binding are available:
 
 ```bash
-module load mpi
 mpirun --version
 python -c "from mpi4py import MPI; print(MPI.Get_library_version())"
 ```
+
+On a module-managed cluster, load the MPI module provided by that cluster
+before running these checks. The exact module name is site-specific.
 
 ## Local parallel run
 
@@ -60,7 +62,7 @@ module load mpi
 python -m venv /path/to/venv
 source /path/to/venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install ssg4wann
+python -m pip install "ssg4wann[mpi]"
 ```
 
 Pre-built `mpi4py` wheels may use an MPI runtime that is incompatible with the
@@ -95,10 +97,9 @@ the cluster. A minimal Slurm script is:
 #SBATCH --exclusive   
 #SBATCH --ntasks 56  
 
+module purge
 module load intel/2022.0.1
 module load mpi/2021.6.0
-module purge
-module load mpi
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate ssg4wann_env
 

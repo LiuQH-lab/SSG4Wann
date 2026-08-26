@@ -1,472 +1,86 @@
 # SSG4Wann
 
-A MPI-enabled tool for **symmetrizing Wannier tight-binding Model** (`*_hr.dat`/`*_tb.dat`) generated from Wannier90, using the Oriented Spin Space Group (OSSG) symmetry of the magnetic system and supporting both strong and weak spin-orbit coupling limits.
+A MPI-enabled tool for **symmetrizing Wannier tight-binding Model**
+(`*_hr.dat`/`*_tb.dat`) generated from Wannier90, using the Oriented Spin
+Space Group (OSSG) symmetry of the magnetic system and supporting both strong
+and weak spin-orbit coupling limits.
 
-For more details, please refer to the [documentation](https://ssg4wann.readthedocs.io/en/latest/).
-
----
-
-## Table of Contents
-
-- [SSG4Wann](#ssg4wann)
-  - [Table of Contents](#table-of-contents)
-  - [Overview](#overview)
-  - [Key Features](#key-features)
-  - [Requirements](#requirements)
-  - [Rapid Example guide](#rapid-example-guide)
-    - [1)Installation](#1installation)
-    - [2) local minimum serial run example](#2-local-minimum-serial-run-example)
-      - [a) python API example](#a-python-api-example)
-      - [b) command line example](#b-command-line-example)
-    - [3) local parallel run example](#3-local-parallel-run-example)
-    - [4) parallel run on HPC cluster](#4-parallel-run-on-hpc-cluster)
-      - [Step 1:](#step-1)
-      - [Step 2:](#step-2)
-  - [Input Files](#input-files)
-  - [Configuration (`sg.in`)](#configuration-sgin)
-    - [Necessary keys](#necessary-keys)
-      - [SeedName tag](#seedname-tag)
-      - [use\_win tag](#use_win-tag)
-      - [NONCOLLINEAR\_channel tag](#noncollinear_channel-tag)
-      - [spin\_direction tag](#spin_direction-tag)
-      - [soc tag](#soc-tag)
-    - [Optional keys](#optional-keys)
-      - [tb\_mode tag](#tb_mode-tag)
-      - [output\_hr\_from\_tb tag](#output_hr_from_tb-tag)
-      - [chnl tag](#chnl-tag)
-      - [bands\_trans tag](#bands_trans-tag)
-      - [bands\_num\_points tag](#bands_num_points-tag)
-      - [use\_hr\_file tag](#use_hr_file-tag)
-      - [use\_tb\_file tag](#use_tb_file-tag)
-      - [begin kpoint\_path ... end kpoint\_path block](#begin-kpoint_path--end-kpoint_path-block)
-      - [each\_symm tag](#each_symm-tag)
-      - [hard\_ave tag](#hard_ave-tag)
-      - [symm\_output tag](#symm_output-tag)
-      - [extend\_LatVec tag](#extend_latvec-tag)
-      - [forced\_hermitianize](#forced_hermitianize)
-      - [spinonly\_speedup](#spinonly_speedup)
-  - [Output Files](#output-files)
-  - [Common errors:](#common-errors)
-  - [Method Summary](#method-summary)
-  - [License](#license)
-
-
----
+For more details, please refer to the
+[documentation](https://ssg4wann.readthedocs.io/en/latest/).
 
 ## Overview
 
-`SSG4Wann` is designed to restore or enforce symmetry constraints on Wannier Hamiltonians by averaging matrix elements under symmetry operations.  
-It supports both collinear (up/down channels) and non-collinear workflows and is optimized for larger workloads through MPI-based parallel computation.
-
-Typical workflow:
-
-1. Read user configuration (`sg.in`)
-2. Load Hamiltonian data (`*_hr.dat`)
-3. Parse Wannier orbital/projection/lattice information
-4. Construct symmetry action on orbital subspaces
-5. Average transformed matrix elements over symmetry operations
-6. Write symmetrized Hamiltonian output
-
----
+`SSG4Wann` is designed to restore or enforce symmetry constraints on Wannier
+Hamiltonians by averaging matrix elements under symmetry operations. It
+supports both collinear (up/down channels) and non-collinear workflows and is
+optimized for larger workloads through MPI-based parallel computation.
 
 ## Key Features
 
--  Symmetrization of Wannier90 HR Hamiltonians with both MSG and SSG symmetries and support for spin channels and non-collinear settings
--  MPI parallelization for efficient processing of large Hamiltonians
-- Configurable behavior through `sg.in` (e.g., channel mode, band transformation, k-point path)
+- Symmetrization of Wannier90 HR Hamiltonians with both MSG and SSG symmetries
+  and support for spin channels and non-collinear settings
+- MPI parallelization for efficient processing of large Hamiltonians
+- Configurable behavior through `sg.in`
+- Wannier90 HR and TB input and output
 - Optional band transformation workflow controls
 
----
+## Installation
 
+SSG4Wann requires Python **3.12+**. It is available on PyPI:
 
-## Requirements
-
-- Python **3.12+** (3.14.3 recommended)
-- `numpy`
-- `pandas`
-- `tqdm`
-- `findspingroup` 
-- `scipy`
-
-
-
-Optional but recommended:
-- `mpi4py` 
-- An MPI implementation:
-  - OpenMPI, MPICH, Intel MPI, etc.
-
----
-
-## Rapid Example guide
-
-
-### 1)Installation
-It is available on PyPI, and you can install it with pip:
 ```bash
-pip install ssg4wann
-pip install ssg4wann --upgrade
+python -m pip install ssg4wann
 ssg4wann --version
 ```
 
-For more help, in the Command Line Interface (CLI), you can run:
+To include MPI support:
+
 ```bash
-ssg4wann --help
+python -m pip install "ssg4wann[mpi]"
 ```
 
-Python `>= 3.12` is required.
+## Quick Start
 
+Prepare a working directory containing an `INCAR` file, the relevant
+Wannier90 `.win` file, and a Wannier90 `*_hr.dat` or `*_tb.dat` file.
 
-### 2) local minimum serial run example
+Generate an initial configuration and run the symmetrization:
 
-ensure the following files are prepared in your working directory:
-- hr file(s)
-- win file(s)
-- INCAR file 
+```bash
+cd /path/to/calculation
+ssg4wann --init
+ssg4wann -c sg.in
+```
 
-#### a) python API example
+You can also use the Python API:
 
 ```python
 import ssg4wann as sw
+
 sw.quick_run()
 ```
-also you can set the working directory and the config file path in the `quick_run` function:
 
-```python
-import ssg4wann as sw
-sw.quick_run(workdir="path/to/your/workdir", config_name="path/to/your/sg.in")
-```
-#### b) command line example
-
-First, generate the `sg.in` file with the `--init` flag:
-
-```bash
-cd path/to/your/workdir
-ssg4wann --init
-# or you can specify the directory
-ssg4wann --init -w path/to/your/workdir
-```
-
-you can directly run the code no matter there is a `sg.in` file or not, the code will automatically generate one if it does not exist and run the symmetrization with the generated `sg.in`. But you need to ensure that the generated `sg.in` is correct according to the warnings. Or you can specify the config file path with the `-c` flag and the working directory with the `-w` flag:
-
-```bash
-# directly run
-ssg4wann
-# run with the specified config file and working directory
-ssg4wann -c config.in -w path/to/your/workdir
-```
-
-### 3) local parallel run example
-install `mpi4py` and an MPI implementation (e.g., OpenMPI, MPICH, Intel MPI) in your local environment. Then you can run the code in parallel with `mpirun` command. 
-
-```bash
-
-mpirun --version
-mpirun -np 4 ssg4wann -c config.in -w path/to/your/workdir
-```
-
-Note: When running in parallel in your local environment, you can control the number of processes with the -np flag. To prevent out-of-memory (OOM) issues, fewer processes may be safer for large structural systems.
-
-### 4) parallel run on HPC cluster
-
-In High-Performance Computing (HPC) clusters, the pre-built mpi4py wheel may conflict with the underlying MPI environment. It is strongly recommended to compile mpi4py from the source using the cluster's native MPI compiler.
-
-#### Step 1: 
-Ensure you have installed mpi4py in your environment which installed ssg4wann
-
-#### Step 2:
-Prepare a bash script (e.g., `job.lsf` or `job.sh`) in your work directory. Load your MPI module and run the ssg4wann, for example:
-```bash
-#!/bin/bash
-# ... your job scheduler directives (e.g., #SBATCH) ...
-module load mpi/2021.6.0
-source /path/to/your/.venv/bin/activate
-mpirun -np 56 ssg4wann -c config.in -w path/to/your/workdir
-```
-
-
-
-
-## Input Files
-
-At minimum, prepare:
-
-
-1. **Wannier Hamiltonian file(s)**  
-	Depending on your channel mode:
-    Non-collinear: `wannier90_hr.dat` 
-    Collinear: `wannier90.up_hr.dat` and `wannier90.dn_hr.dat`
-
-2. **Wannier metadata files** 
-
-    Non-collinear: `wannier90.win` 
-    Collinear: `wannier90.up.win` and `wannier90.dn.win`
-
-    the code will read the necessary Wannier basis, lattice structure, projection information from the `.win` file(s).
-
-
-3. **INCAR file** 
-    The code will read `MAGMOM` in the INCAR file to determine the magnetic structure of the system, which is necessary for the correct symmetrization of the Hamiltonian.
-    For collinear systems, the `MAGMOM` should be set to a single value per atom, while for non-collinear systems, the `MAGMOM` should be set to three values (x, y, z) per atom to specify the spin direction.
-
-    If `ssg4wann` is going to generate the `sg.in` automatically, it will read `LNONCOLLINEAR` and `LSORBIT` tags in the INCAR file to determine the `soc` and `NONCOLLINEAR_channel` settings in the generated `sg.in`.
-
-Furthermore, you can provide an optional `sg.in` file to specify the configuration for the symmetrization process. If it is not provided, the code will automatically generate one based on the input files and the system parameters it detects. See the next section for details on the `sg.in` configuration.
-
-## Configuration (`sg.in`)
-
-`sg.in` is not necessarily required for running the code. If you do not provide an `sg.in` file, the code will attempt to auto-detect the system parameters and generate a it when running `ssg4wann`, and it will continue to symmetrize the Hamiltonian with the auto-generated `sg.in`. Also you can use `ssg4wann --init` command to generate the `sg.in` without running the symmetrization.
-
-Example skeleton:
-
-```ini
-SeedName = 'wannier90'
-soc = False
-use_win = wannier90.win
-tb_mode = False
-output_hr_from_tb = False
-chnl = True
-bands_trans = False
-bands_num_points = 100
-use_hr_file = 'wannier90_symmed_hr.dat'
-use_tb_file = 'wannier90_symmed_tb.dat'
-NONCOLLINEAR_channel = true
-
-```
-
-### Necessary keys
-
-#### SeedName tag
-```ini
-Tag name:   SeedName
-Type:       String
-Description:  base name for Wannier files (e.g., `wannier90`)
-```
-
-
-
-#### use_win tag
-```ini
-Tag name:   use_win
-Type:       String (file path)
-Description: path to Wannier90 `.win` file for orbital/projection/lattice info (e.g., `wannier90.win`)
-```
-
-#### NONCOLLINEAR_channel tag
-```ini
-Tag name:   NONCOLLINEAR_channel
-Type:       Boolean (True/False)
-Description: whether the system is in non-collinear channel. 
-When `True`, the program will read the non-collinear HR file (`wannier90_hr.dat`) and perform symmetrization in the non-collinear channel. 
-When `False`, the program will read the collinear HR files (`wannier90.up_hr.dat` and `wannier90.dn_hr.dat`) and perform symmetrization in the collinear channel. 
-```
-
-#### spin_direction tag
-```ini
-Tag name:   spin_direction
-Type:       List of floats (e.g., '1 0 0')
-Description: the spin quantization axis for symmetrization. 
-It is  necessary to ensure that the spin direction is same as the `SAXIS` parameter in the VASP calculation when `NONCOLLINEAR_channel = True`. 
-It is recommended to use the default `SAXIS = 0 0 1` for the VASP calculation. For the `NONCOLLINEAR_channel = True` case, this key is set to be `0 0 1` by default.
-Only the correct setting of the spin direction can ensure the correct symmetrization of the Hamiltonian. 
-This key is necessary when `NONCOLLINEAR_channel = False`.
-```
-#### soc tag
-```ini
-Tag name:   soc
-Type:       Boolean (True/False)
-Description: mark for spin-orbit coupling limit. 
-
-When `False`, the program will perform the whole oriented spin space group to symmetrize the Hamiltonian. 
-
-When `True`, the program will lower the symmetry to the corresponding subgroup of OSSG, which is equivalent to the magnetic space group (MSG) and perform the symmetrization with the MSG symmetry.
-```
-
-### Optional keys
-
-#### tb_mode tag
-```ini
-Tag name:   tb_mode
-Type:       Boolean (True/False)
-Description: read Wannier90 `*_tb.dat` instead of `*_hr.dat`. The Hamiltonian
-block uses the existing HR symmetrization, while the Cartesian position-matrix
-block is symmetrized as a vector operator. The output is `*_symmed_tb.dat`.
-```
-
-#### output_hr_from_tb tag
-```ini
-Tag name:   output_hr_from_tb
-Type:       Boolean (True/False)
-Default:    False
-Description: when `tb_mode = True`, also write the symmetrized Hamiltonian
-block in the standard Wannier90 HR format. The program reuses the Hamiltonian
-already produced during TB symmetrization; it does not perform a second
-symmetrization.
-
-For a non-collinear calculation, the additional output is
-`<SeedName>_symmed_hr.dat`. For a collinear calculation, the additional outputs
-are `<SeedName>.up_symmed_hr.dat` and `<SeedName>.dn_symmed_hr.dat`.
-This tag has no effect when `tb_mode = False`.
-```
-
-#### chnl tag
-```ini
-Tag name:   chnl
-Type:       Boolean (True/False)
-Description: describes the spin sequencing for the Wannier basis. 
-When `True`, the basis is ordered as [up1, up2, ..., upN, dn1, dn2, ..., dnN]. 
-When `False`, the basis is ordered as [up1, dn1, up2, dn2, ..., upN, dnN]. It is set to `True` by default.
-```
-#### bands_trans tag
-```ini
-Tag name:   bands_trans
-Type:       Boolean (True/False)
-Description: whether to perform band structure transformation. When `True`, the program will read the specified HR file (see `use_hr_file` key) and calculate the band structure data. It is set to `False` by default.     
-When `tb_mode = True` at the same time, the program instead reads the
-Hamiltonian block from the TB file specified by `use_tb_file` and reuses the
-same band calculation workflow. The position-matrix block in the TB file is
-not used for the band calculation.
-```
-
-#### bands_num_points tag
-```ini
-Tag name:   bands_num_points
-Type:       Integer
-Description: number of k-points between each pair of k-points for band structure transformation. It is set to `100` by default. 
-```
----
-
-#### use_hr_file tag
-```ini
-Tag name:   use_hr_file
-Type:       String (file path)
-Description: path to the HR file for band structure transformation. This key is necessary when `bands_trans` is set to `True`.
-```
-
-#### use_tb_file tag
-```ini
-Tag name:   use_tb_file
-Type:       String (file path)
-Default:    wannier90_symmed_tb.dat
-Description: path to the TB file for band structure transformation. This key
-is used when both `bands_trans` and `tb_mode` are set to `True`. The
-Hamiltonian block is read from this file and transformed with the same logic
-used for an HR file.
-```
-
-#### begin kpoint_path ... end kpoint_path block
-```ini
-Tag name:   begin kpoint_path ... end kpoint_path
-Type:       Block of lines, each line containing a k-point label and its coordinates (e.g., `G 0.0 0.0 0.0`)
-Description: defines the k-point path for band structure transformation. This block is necessary when `bands_trans` is set to `True`. 
-The k-point labels and coordinates should be specified in the same format as in wannier90 `.win` files. For example, you can specify:
-begin kpoint_path
-G 0.0 0.0 0.0 X 0.5 0.0 0.0
-X 0.5 0.0 0.0 M 0.5 0.5 0.0
-end kpoint_path
-to define a k-point path from G to X to M.
-```
-
-#### each_symm tag
-```ini
-Tag name:   each_symm
-Type:       Boolean (True/False)
-Description: Whether to output the symmetrized HR file for each symmetry operation. 
-When `each_symm` is set to `True`, the program will output multiple HR files, which may cost more computational time. 
-This tag is mainly for debugging and testing purposes and is set to `False` by default. 
-```
-
-#### hard_ave tag
-```ini
-Tag name:   hard_ave
-Type:       Boolean (True/False)
-Description: Whether to perform hard averaging of the transformed HR data. 
-When `True`, the program will average the transformed HR data over all symmetry operations even though it does not contribute to the symmetrized entry. 
-It may cost more computational time and output the symmetrized HR file with less accuracy. 
-This tag is mainly for debugging and testing purposes and is set to `False` by default. 
-```
-#### symm_output tag
-```ini
-Tag name:   symm_output
-Type:       Boolean (True/False)
-Description: whether to output the group information
-
-The tag is set to be `True` by default.
-```
-
-#### extend_LatVec tag
-```ini
-Tag name:   extend_LatVec
-Type:       Boolean (True/False)
-Description: whether to extend the lattice vectors set of the symmetrized Hamiltonian.
-When `True`, the program will extend the lattice vectors set which is generated by the operators.
-When `False`, the program will use the lattice vectors set which is same as the original hr file
-this tag.
-
-The tag is set to be `True` by default.
-```
-
-#### forced_hermitianize
-```ini
-Tag name:   forced_hermitianize
-Type:       Boolean(True/False)
-Description: whether to output the Hamiltonian with the hermitian forcing process.
-The output Hamiltonian is almost hermitian if an hermitian is inputed. Anyway if it is needed, turn it on.
-
-The tag is set to be `False` by default.
-```
-
-
-#### spinonly_speedup
-```ini
-Tag name:   spinonly_speedup
-Type:       Boolean(True/False)
-Description: whether to perform the direct product structure to speed up the symmetrization.
-When `True`, the program will only perform the NONTRIVIAL SPIN GROUP operation when symmetrization without SOC, and detect the spin-only group to ensure whether the Hamiltonian is real.
-When `False`, the program will perform the whole oriented spin space group operation when calculating without SOC, which is more time-consuming.
-This tag is mainly for testing purposes and is set to `True` by default. 
-It is intentionally not applied in `tb_mode`, because the position-matrix
-block must currently be averaged over the full oriented spin space group.
-```
-
-## Output Files
-
-Typical output includes symmetrized HR files or band structure data, depending on the configuration:
-
-- `*_symmed_hr.dat` (also produced from TB mode when `output_hr_from_tb = True`)
-- `*_symmed_tb.dat`
-- `*_band.dat`
-
-Output naming is controlled by seed/config and channel logic in the code.
-
----
-
-## Common errors:
-Even if you successfully run the code without any error, it is still possible that the symmetrization is not performed correctly due to incorrect input files or configuration.
-
-- Your symmetrized band structure is completely different from the original one, but with the non-trivial dispersion and the same number of bands. 
-  - Ensure the `spin direction` parameter is correctly specified.
-  - the wannier output Hamiltonian is under the basis of the wannier default squence, instead of the orbital squence you defined in the `win` file. Make sure that the `win` file which is inputed to `ssg4wann` has the same squence with the Hamiltonian file!!!
-  
-- Your symmetrized band structure is partially the same as the original one, but with some **flat bands**, **extra bands**, **missing bands** or **connected bands**. This is most probably caused by the low quality of the wannierization process, even though the wannier band structure looks good. 
-    - Ensure the wannierization disentanglement is well converged
-    - Set `num_iter` as less as possible except you are certain that the you have constructed very perfect wannier functions. Check your `wannier90.wout` file to and ensure your center of wannier functions are not shifted too far from the original atomic positions.
-    - There might be some mistake with the wannierization process. Define  atomic orbital for the initial guess as more as possible, even if they have higher eigenvalues than the energy window which is concerned. If the defined wannier basis is not enough, the disentanglement process may introduce the components of other orbitals which may cause the wrong result of symmetrization. 
-
-
-## Method Summary
-
-The core symmetrization pipeline is conceptually:
-
-1. Build expressions of symmetry operators in orbital/spin basis
-2. Map indices/orbitals under each operation
-3. Find the lattice vectors set of the symmetrized Hamiltonian
-4. Map the symmetrized entries to equivalent entries in the original HR data and average over contributing symmetry operations to get the symmetrized Hamiltonian.
-
+> [!WARNING]
+> A run that finishes without an exception is not necessarily physically
+> correct. The spin direction, Wannier projection order, atomic positions,
+> and Hamiltonian basis must be mutually consistent.
+
+## Documentation
+
+- [Getting Started](https://ssg4wann.readthedocs.io/en/latest/getting-started/)
+  covers installation, input files, serial execution, and output files.
+- [Configuration Reference](https://ssg4wann.readthedocs.io/en/latest/configuration/)
+  documents the `sg.in` tags.
+- [Basis, Spin and Symmetry Conventions](https://ssg4wann.readthedocs.io/en/latest/conventions/)
+  describes the conventions required for a consistent calculation.
+- [Troubleshooting and Compatibility](https://ssg4wann.readthedocs.io/en/latest/troubleshooting/)
+  collects common errors and known VASP compatibility issues.
+- [Examples](https://ssg4wann.readthedocs.io/en/latest/examples/) describes the
+  calculations included in the repository.
+- [MPI and HPC](https://ssg4wann.readthedocs.io/en/latest/mpi-hpc/) covers local
+  MPI execution and cluster job scripts.
 
 ## License
+
 This project is licensed under the Apache License, Version 2.0.
 See the LICENSE file for details.
-
-
-
-
